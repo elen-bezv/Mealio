@@ -1,4 +1,4 @@
-# Grocery — Recipe to Cart
+# Mealio — Recipe to Cart
 
 Production-grade AI web app that converts recipes into grocery shopping carts across multiple online stores.
 
@@ -25,7 +25,7 @@ Production-grade AI web app that converts recipes into grocery shopping carts ac
 1. **Clone and install**
 
    ```bash
-   cd Grocery && npm install
+   cd Mealio && npm install
    ```
 
 2. **Environment**
@@ -60,6 +60,10 @@ Production-grade AI web app that converts recipes into grocery shopping carts ac
    ```
 
    Open [http://localhost:3000](http://localhost:3000). Sign in with email (any email for demo) or **Continue with Google** (if Google OAuth is configured).
+
+### Deploy to Vercel
+
+See **[VERCEL_ENV.md](./VERCEL_ENV.md)** for the exact environment variables to add in Vercel (Settings → Environment Variables). Use your production URL for `NEXTAUTH_URL` and add that URL’s callback to Google OAuth redirect URIs.
 
 ### Google OAuth
 

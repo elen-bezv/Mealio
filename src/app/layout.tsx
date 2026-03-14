@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Grocery — Recipe to Cart",
+  title: "Mealio — Recipe to Cart",
   description: "Convert recipes into grocery carts across multiple stores",
 };
 

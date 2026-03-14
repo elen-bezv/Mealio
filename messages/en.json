@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Grocery",
+    "appName": "Mealio",
     "signOut": "Sign out",
     "dashboard": "Dashboard",
     "importRecipe": "Import Recipe",
@@ -37,7 +37,7 @@
     "storesDesc": "Connect Shufersal, Tiv Taam, etc.; agent fills cart."
   },
   "login": {
-    "title": "Grocery",
+    "title": "Mealio",
     "subtitle": "Recipe to cart, across stores.",
     "email": "Email",
     "password": "Password",

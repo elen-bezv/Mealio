@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Grocery",
+    "appName": "Mealio",
     "signOut": "Вийти",
     "dashboard": "Головна",
     "importRecipe": "Імпорт рецепта",
@@ -37,7 +37,7 @@
     "storesDesc": "Підключіть Shufersal, Tiv Taam тощо; агент заповнить кошик."
   },
   "login": {
-    "title": "Grocery",
+    "title": "Mealio",
     "subtitle": "Рецепт у кошик, у будь-якому магазині.",
     "email": "Email",
     "password": "Пароль",

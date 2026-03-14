@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Grocery",
+    "appName": "Mealio",
     "signOut": "התנתק",
     "dashboard": "לוח בקרה",
     "importRecipe": "ייבוא מתכון",
@@ -37,7 +37,7 @@
     "storesDesc": "חבר שופרסל, טיב טעם וכו'; הסוכן ממלא עגלה."
   },
   "login": {
-    "title": "Grocery",
+    "title": "Mealio",
     "subtitle": "מתכון לעגלה, בכל חנות.",
     "email": "אימייל",
     "password": "סיסמה",

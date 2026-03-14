@@ -47,7 +47,7 @@ function LoginForm() {
         style={{ padding: "var(--spacing-8)" }}
       >
         <h1 className="page-title" style={{ marginBottom: "var(--spacing-2)" }}>
-          Grocery
+          Mealio
         </h1>
         <p className="page-subtitle" style={{ marginBottom: "var(--spacing-8)" }}>
           Recipe to cart, across stores.
@@ -66,11 +66,18 @@ function LoginForm() {
               Usually this is due to:
             </p>
             <ul className="list-inside list-disc text-[var(--text-body-sm)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-3)" }}>
-              <li>Redirect URI in Google Cloud Console must be exactly: <code className="rounded bg-black/20 px-1">http://localhost:3000/api/auth/callback/google</code></li>
-              <li>Database must be running and migrated (<code className="rounded bg-black/20 px-1">npm run db:push</code>)</li>
+              <li>
+                Redirect URI in Google Cloud Console must be exactly:{" "}
+                <code className="rounded bg-black/20 px-1">
+                  {typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback/google` : "https://your-domain.com/api/auth/callback/google"}
+                </code>
+              </li>
+              <li>Database must be running and migrated (<code className="rounded bg-black/20 px-1">npm run db:push</code> locally; on Vercel use Vercel Postgres and run migrations)</li>
             </ul>
             <p className="text-[var(--text-body-sm)] text-[var(--text-tertiary)]">
-              Check the terminal where <code className="rounded bg-black/20 px-1">npm run dev</code> is running for the exact error.
+              {typeof window !== "undefined" && window.location.hostname === "localhost"
+                ? "Check the terminal where npm run dev is running for the exact error."
+                : "Check Vercel → Project → Logs for the exact error."}
             </p>
           </div>
         )}
