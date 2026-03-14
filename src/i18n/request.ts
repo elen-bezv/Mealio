@@ -8,7 +8,7 @@ export default getRequestConfig(async () => {
     const store = await cookies();
     const cookieLocale = store.get("NEXT_LOCALE")?.value;
     if (cookieLocale && routing.locales.includes(cookieLocale as "uk" | "en" | "he")) {
-      locale = cookieLocale;
+      locale = cookieLocale as "uk" | "en" | "he";
     }
   } catch {
     // cookies() can fail in some Edge contexts
