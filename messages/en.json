@@ -1,0 +1,96 @@
+{
+  "common": {
+    "appName": "Grocery",
+    "signOut": "Sign out",
+    "dashboard": "Dashboard",
+    "importRecipe": "Import Recipe",
+    "cookbooks": "Cookbooks",
+    "recipeLibrary": "Recipe Library",
+    "readyRecipes": "Ready Recipes",
+    "weeklyPlanner": "Weekly Planner",
+    "shoppingList": "Shopping List",
+    "pantry": "Pantry",
+    "storeConnections": "Store Connections",
+    "settings": "Settings",
+    "language": "Language",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "error": "Error"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Upload recipes, plan meals, and shop across stores.",
+    "importRecipeCard": "Import recipe",
+    "importRecipeDesc": "Paste link (blog, Instagram, TikTok), text, or upload photo/PDF. AI structures the recipe.",
+    "cookbooksCard": "Cookbooks",
+    "cookbooksDesc": "Upload PDF cookbooks; detect and import multiple recipes at once.",
+    "libraryCard": "Recipe library",
+    "libraryDesc": "Your saved recipes, tagged and categorized.",
+    "readyRecipesCard": "Ready recipes",
+    "readyRecipesDesc": "Built-in recipes to add to your plan or list.",
+    "plannerCard": "Weekly planner",
+    "plannerDesc": "Plan breakfast, lunch, dinner for the week.",
+    "shoppingCard": "Shopping list",
+    "shoppingDesc": "Merged ingredients, ready to send to a store.",
+    "storesCard": "Stores",
+    "storesDesc": "Connect Shufersal, Tiv Taam, etc.; agent fills cart."
+  },
+  "login": {
+    "title": "Grocery",
+    "subtitle": "Recipe to cart, across stores.",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "continueWithGoogle": "Continue with Google"
+  },
+  "settings": {
+    "title": "Settings",
+    "languageLabel": "Interface language",
+    "languageSaved": "Language saved"
+  },
+  "library": {
+    "title": "Recipe Library",
+    "subtitle": "Save and manage your recipes.",
+    "uploadRecipe": "Upload recipe",
+    "pasteText": "Paste text",
+    "websiteUrl": "Website URL",
+    "extractIngredients": "Extract ingredients",
+    "saveToLibrary": "Save to library",
+    "noRecipes": "No recipes yet. Upload a recipe to get started."
+  },
+  "shopping": {
+    "title": "Shopping List",
+    "subtitle": "Merged ingredients. Choose a store to have the agent add items to cart.",
+    "selectList": "Select list",
+    "sendToStore": "Send to store",
+    "shopForIngredients": "Shop for ingredients",
+    "addingToCart": "Adding to cart…",
+    "noLists": "No shopping lists. Create one from a recipe or meal plan.",
+    "addToPantry": "Add to pantry"
+  },
+  "pantry": {
+    "title": "Pantry",
+    "subtitle": "Ingredients you already have at home. Shopping lists are automatically reduced using pantry.",
+    "addItem": "Add item",
+    "ingredientName": "Ingredient",
+    "editItem": "Edit",
+    "deleteItem": "Delete",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "expirationDate": "Expiration date",
+    "expiresSoon": "Expires soon",
+    "noItems": "Your pantry is empty. Add items manually or from a shopping list.",
+    "addFromShoppingList": "Add from shopping list"
+  },
+  "stores": {
+    "title": "Store Connections",
+    "subtitle": "Connect grocery stores. Log in once; we store your session securely.",
+    "howItWorks": "How it works",
+    "openSiteToLogin": "Open site to log in",
+    "connected": "Connected",
+    "yourConnections": "Your connections",
+    "disconnect": "Disconnect"
+  }
+}

@@ -1,0 +1,342 @@
+@import "tailwindcss";
+
+/* ============== DESIGN TOKENS ============== */
+:root {
+  /* Backgrounds */
+  --bg-page: #0a0a0b;
+  --bg-surface: #161618;
+  --bg-surface-hover: #1c1c1f;
+  --bg-elevated: #222224;
+  --bg-input: #0e0e10;
+
+  /* Text */
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-inverse: #0a0a0b;
+
+  /* Accent (restrained use) */
+  --accent: #22c55e;
+  --accent-hover: #16a34a;
+  --accent-muted: rgba(34, 197, 94, 0.15);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+
+  /* Spacing scale (px) – use only these */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Page layout */
+  --page-padding-x: 32px;
+  --page-padding-y: 32px;
+  --page-max-width: 1200px;
+  --sidebar-width: 240px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Typography */
+  --text-display: 2rem;      /* 32px */
+  --text-title: 1.5rem;     /* 24px */
+  --text-section: 1.125rem; /* 18px */
+  --text-body: 1rem;        /* 16px */
+  --text-body-sm: 0.875rem; /* 14px */
+  --text-caption: 0.8125rem;/* 13px */
+  --text-label: 0.75rem;    /* 12px */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* Component heights */
+  --input-height: 44px;
+  --button-height: 44px;
+  --button-height-sm: 36px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Legacy compatibility (map to new tokens) */
+  --bg-primary: var(--bg-page);
+  --bg-secondary: var(--bg-surface);
+  --bg-tertiary: var(--bg-surface-hover);
+  --text-muted: var(--text-tertiary);
+  --accent-hover: var(--accent-hover);
+  --radius: var(--radius-md);
+}
+
+@theme inline {
+  --color-background: var(--bg-page);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ============== BASE ============== */
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Main content area: prevent horizontal overflow, min height for short pages */
+main {
+  min-height: 100vh;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ============== LAYOUT UTILITIES ============== */
+.page-container {
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  box-sizing: border-box;
+  min-width: 0; /* allow flex/grid children to shrink below content size */
+}
+
+.page-header {
+  margin-bottom: var(--spacing-8);
+}
+
+.page-title {
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.page-subtitle {
+  font-size: var(--text-body-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  margin: 0;
+  max-width: 56ch;
+}
+
+.section {
+  margin-bottom: var(--spacing-8);
+}
+
+.section-title {
+  font-size: var(--text-section);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-4) 0;
+}
+
+/* ============== CARD ============== */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.card-interactive {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.card-interactive:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-default);
+}
+
+/* ============== BUTTONS ============== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  height: var(--button-height);
+  padding-inline: var(--spacing-6);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  height: var(--button-height-sm);
+  padding-inline: var(--spacing-4);
+  font-size: var(--text-caption);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.btn-destructive {
+  background: transparent;
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* ============== INPUTS ============== */
+.input-wrap {
+  margin-bottom: var(--spacing-4);
+}
+
+.input-label {
+  display: block;
+  font-size: var(--text-label);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-2);
+}
+
+.input-helper {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  margin-top: var(--spacing-2);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  height: var(--input-height);
+  padding-inline: var(--spacing-4);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.textarea {
+  height: auto;
+  min-height: 120px;
+  padding-block: var(--spacing-3);
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-4) center;
+  padding-right: 36px;
+}
+
+/* ============== LOADING SPINNER ============== */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--spacing-8);
+}
+
+/* ============== ANIMATIONS ============== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ============== RESPONSIVE PAGE PADDING ============== */
+@media (max-width: 768px) {
+  :root {
+    --page-padding-x: 16px;
+    --page-padding-y: 24px;
+  }
+}

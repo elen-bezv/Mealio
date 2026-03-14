@@ -1,0 +1,96 @@
+{
+  "common": {
+    "appName": "Grocery",
+    "signOut": "התנתק",
+    "dashboard": "לוח בקרה",
+    "importRecipe": "ייבוא מתכון",
+    "cookbooks": "ספרי בישול",
+    "recipeLibrary": "ספר המתכונים שלי",
+    "readyRecipes": "מתכונים מוכנים",
+    "weeklyPlanner": "תכנון שבועי",
+    "shoppingList": "רשימת קניות",
+    "pantry": "מזווה",
+    "storeConnections": "חיבורי חנויות",
+    "settings": "הגדרות",
+    "language": "שפה",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "loading": "טוען…",
+    "error": "שגיאה"
+  },
+  "dashboard": {
+    "title": "לוח בקרה",
+    "subtitle": "העלה מתכונים, תכנן ארוחות וקנה בחנויות.",
+    "importRecipeCard": "ייבוא מתכון",
+    "importRecipeDesc": "הדבק קישור (בלוג, אינסטגרם, טיקטוק), טקסט או העלה תמונה/PDF. בינה מלאכותית מארגנת את המתכון.",
+    "cookbooksCard": "ספרי בישול",
+    "cookbooksDesc": "העלה ספרי PDF; זהה וייבא מתכונים מרובים.",
+    "libraryCard": "ספר המתכונים",
+    "libraryDesc": "המתכונים השמורים שלך, עם תגיות וקטגוריות.",
+    "readyRecipesCard": "מתכונים מוכנים",
+    "readyRecipesDesc": "מתכונים מובנים לתוכנית או לרשימה.",
+    "plannerCard": "תכנון שבועי",
+    "plannerDesc": "תכנן ארוחת בוקר, צהריים וערב בשבוע.",
+    "shoppingCard": "רשימת קניות",
+    "shoppingDesc": "מרכיבים מאוחדים, מוכנים לשליחה לחנות.",
+    "storesCard": "חנויות",
+    "storesDesc": "חבר שופרסל, טיב טעם וכו'; הסוכן ממלא עגלה."
+  },
+  "login": {
+    "title": "Grocery",
+    "subtitle": "מתכון לעגלה, בכל חנות.",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "signIn": "התחבר",
+    "signingIn": "מתחבר…",
+    "continueWithGoogle": "המשך עם גוגל"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "languageLabel": "שפת הממשק",
+    "languageSaved": "השפה נשמרה"
+  },
+  "library": {
+    "title": "ספר המתכונים",
+    "subtitle": "שמור ונהל את המתכונים שלך.",
+    "uploadRecipe": "העלה מתכון",
+    "pasteText": "הדבק טקסט",
+    "websiteUrl": "כתובת אתר",
+    "extractIngredients": "חלץ מרכיבים",
+    "saveToLibrary": "שמור לספרייה",
+    "noRecipes": "אין עדיין מתכונים. העלה מתכון."
+  },
+  "shopping": {
+    "title": "רשימת קניות",
+    "subtitle": "מרכיבים מאוחדים. בחר חנות והסוכן יוסיף פריטים לעגלה.",
+    "selectList": "בחר רשימה",
+    "sendToStore": "שלח לחנות",
+    "shopForIngredients": "הוסף לעגלה",
+    "addingToCart": "מוסיף לעגלה…",
+    "noLists": "אין רשימות. צור מרשימת מתכון או תוכנית.",
+    "addToPantry": "הוסף למזווה"
+  },
+  "pantry": {
+    "title": "מזווה",
+    "subtitle": "מרכיבים שכבר יש לך בבית. רשימות הקניות מתעדכנות אוטומטית לפי המזווה.",
+    "addItem": "הוסף פריט",
+    "ingredientName": "מרכיב",
+    "editItem": "ערוך",
+    "deleteItem": "מחק",
+    "quantity": "כמות",
+    "unit": "יחידה",
+    "expirationDate": "תאריך תפוגה",
+    "expiresSoon": "פג תוקף בקרוב",
+    "noItems": "המזווה ריק. הוסף פריטים ידנית או מרשימת קניות.",
+    "addFromShoppingList": "הוסף מרשימת קניות"
+  },
+  "stores": {
+    "title": "חיבורי חנויות",
+    "subtitle": "חבר חנויות. התחבר פעם אחת; נשמור את ההפעלה בצורה מאובטחת.",
+    "howItWorks": "איך זה עובד",
+    "openSiteToLogin": "פתח את האתר להתחברות",
+    "connected": "מחובר",
+    "yourConnections": "החיבורים שלך",
+    "disconnect": "התנתק"
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "common": {
+    "appName": "Grocery",
+    "signOut": "Вийти",
+    "dashboard": "Головна",
+    "importRecipe": "Імпорт рецепта",
+    "cookbooks": "Кулінарні книги",
+    "recipeLibrary": "Мої рецепти",
+    "readyRecipes": "Готові рецепти",
+    "weeklyPlanner": "Тижневий план",
+    "shoppingList": "Список покупок",
+    "pantry": "Комора",
+    "storeConnections": "Магазини",
+    "settings": "Налаштування",
+    "language": "Мова",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "loading": "Завантаження…",
+    "error": "Помилка"
+  },
+  "dashboard": {
+    "title": "Головна",
+    "subtitle": "Завантажуйте рецепти, плануйте прийоми їжі та замовляйте в магазинах.",
+    "importRecipeCard": "Імпорт рецепта",
+    "importRecipeDesc": "Посилання (блог, Instagram, TikTok), текст або фото/PDF. AI структурує рецепт.",
+    "cookbooksCard": "Кулінарні книги",
+    "cookbooksDesc": "Завантажте PDF-книги, виявте та імпортуйте рецепти.",
+    "libraryCard": "Мої рецепти",
+    "libraryDesc": "Збережені рецепти з тегами та категоріями.",
+    "readyRecipesCard": "Готові рецепти",
+    "readyRecipesDesc": "Вбудовані рецепти для плану або списку.",
+    "plannerCard": "Тижневий план",
+    "plannerDesc": "Сніданки, обіди, вечері на тиждень.",
+    "shoppingCard": "Список покупок",
+    "shoppingDesc": "Об’єднані інгредієнти, готові до відправки в магазин.",
+    "storesCard": "Магазини",
+    "storesDesc": "Підключіть Shufersal, Tiv Taam тощо; агент заповнить кошик."
+  },
+  "login": {
+    "title": "Grocery",
+    "subtitle": "Рецепт у кошик, у будь-якому магазині.",
+    "email": "Email",
+    "password": "Пароль",
+    "signIn": "Увійти",
+    "signingIn": "Вхід…",
+    "continueWithGoogle": "Продовжити з Google"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "languageLabel": "Мова інтерфейсу",
+    "languageSaved": "Мову збережено"
+  },
+  "library": {
+    "title": "Мої рецепти",
+    "subtitle": "Зберігайте та керуйте рецептами.",
+    "uploadRecipe": "Завантажити рецепт",
+    "pasteText": "Вставити текст",
+    "websiteUrl": "Посилання на сайт",
+    "extractIngredients": "Витягти інгредієнти",
+    "saveToLibrary": "Зберегти в бібліотеку",
+    "noRecipes": "Рецептів ще немає. Завантажте рецепт."
+  },
+  "shopping": {
+    "title": "Список покупок",
+    "subtitle": "Об’єднані інгредієнти. Оберіть магазин — агент додасть товари в кошик.",
+    "selectList": "Оберіть список",
+    "sendToStore": "В магазин",
+    "shopForIngredients": "Додати в кошик",
+    "addingToCart": "Додаємо в кошик…",
+    "noLists": "Немає списків. Створіть з рецепта або плану.",
+    "addToPantry": "Додати в комору"
+  },
+  "pantry": {
+    "title": "Комора",
+    "subtitle": "Інгредієнти, які вже є вдома. Список покупок автоматично зменшується з урахуванням комори.",
+    "addItem": "Додати продукт",
+    "ingredientName": "Інгредієнт",
+    "editItem": "Редагувати",
+    "deleteItem": "Видалити",
+    "quantity": "Кількість",
+    "unit": "Одиниця",
+    "expirationDate": "Термін придатності",
+    "expiresSoon": "Скоро закінчується",
+    "noItems": "У коморі ще нічого немає. Додайте продукти вручну або зі списку покупок.",
+    "addFromShoppingList": "Додати зі списку покупок"
+  },
+  "stores": {
+    "title": "Магазини",
+    "subtitle": "Підключіть магазини. Увійдіть один раз; сесію зберігаємо зашифровано.",
+    "howItWorks": "Як це працює",
+    "openSiteToLogin": "Відкрити сайт для входу",
+    "connected": "Підключено",
+    "yourConnections": "Ваші підключення",
+    "disconnect": "Відключити"
+  }
+}
