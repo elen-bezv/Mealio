@@ -53,7 +53,6 @@ export function getAuthOptions(): NextAuthOptions {
   return {
     adapter: PrismaAdapter(prisma) as Adapter,
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-    trustHost: true,
     useSecureCookies: isSecure,
     session: {
       strategy: "jwt",

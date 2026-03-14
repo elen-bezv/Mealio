@@ -8,6 +8,7 @@ Use **Production** (and optionally Preview) for each.
 | `DATABASE_URL` | **Must be a hosted Postgres URL, not localhost.** In Vercel: Project → **Storage** → **Create Database** → Postgres → use the connection string (e.g. `POSTGRES_URL`) as `DATABASE_URL`. Do **not** use `localhost:5432` on Vercel—it will fail. |
 | `AUTH_SECRET` | Copy from your local `.env` or `.env.local` (same value as local). Or generate: `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Your deployment URL, e.g. **`https://mealio-gules.vercel.app`** or `https://mealio.vercel.app` (must match the URL in the redirect URI) |
+| `AUTH_TRUST_HOST` | Set to **`true`** so NextAuth trusts Vercel’s proxy (fixes “State cookie was missing” on Google sign-in) |
 | `AUTH_GOOGLE_ID` | Copy from your local `.env` or `.env.local` |
 | `AUTH_GOOGLE_SECRET` | Copy from your local `.env` or `.env.local` |
 | `ENCRYPTION_KEY` | Copy from your local `.env` (same 32+ character secret as local) |
