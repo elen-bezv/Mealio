@@ -1,16 +1,11 @@
-import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { routing } from "./i18n/routing";
 
-const handleI18nRouting = createMiddleware(routing);
-
-export function proxy(request: NextRequest) {
-  try {
-    return handleI18nRouting(request);
-  } catch {
-    return NextResponse.next();
-  }
+// Pass-through only. With localePrefix: "never" we use a flat app/ (no [locale]).
+// createMiddleware would rewrite / → /uk and cause 404. Locale comes from
+// cookie in src/i18n/request.ts instead.
+export function proxy(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
