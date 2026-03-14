@@ -72,12 +72,20 @@ function LoginForm() {
                   {typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback/google` : "https://your-domain.com/api/auth/callback/google"}
                 </code>
               </li>
-              <li>Database must be running and migrated (<code className="rounded bg-black/20 px-1">npm run db:push</code> locally; on Vercel use Vercel Postgres and run migrations)</li>
+              <li>
+                <code className="rounded bg-black/20 px-1">NEXTAUTH_URL</code> on Vercel must match this site (e.g. <code className="rounded bg-black/20 px-1">https://mealio-gules.vercel.app</code>). Redeploy after changing env.
+              </li>
+              <li>
+                <code className="rounded bg-black/20 px-1">AUTH_SECRET</code> and <code className="rounded bg-black/20 px-1">ENCRYPTION_KEY</code> must be real secrets (e.g. from <code className="rounded bg-black/20 px-1">openssl rand -base64 32</code>), not placeholders.
+              </li>
+              <li>
+                <code className="rounded bg-black/20 px-1">DATABASE_URL</code> must be the full Postgres connection string from Vercel Postgres. Database must be migrated (<code className="rounded bg-black/20 px-1">npm run db:push</code>).
+              </li>
             </ul>
             <p className="text-[var(--text-body-sm)] text-[var(--text-tertiary)]">
               {typeof window !== "undefined" && window.location.hostname === "localhost"
                 ? "Check the terminal where npm run dev is running for the exact error."
-                : "Check Vercel → Project → Logs for the exact error."}
+                : "Check Vercel → Project → Logs for the exact error (e.g. State cookie was missing, DATABASE_URL, or OAuth). Try in an incognito window after fixing env."}
             </p>
           </div>
         )}

@@ -5,7 +5,7 @@ Use **Production** (and optionally Preview) for each.
 
 | Variable | Where to get the value |
 |----------|-------------------------|
-| `DATABASE_URL` | **Must be a hosted Postgres URL, not localhost.** In Vercel: Project → **Storage** → **Create Database** → Postgres → use the connection string (e.g. `POSTGRES_URL`) as `DATABASE_URL`. Do **not** use `localhost:5432` on Vercel—it will fail. |
+| `DATABASE_URL` | **Full** Postgres URL from Vercel Storage (e.g. copy from `database_PRISMA_DATABASE_URL` or the DB’s Connect tab). Paste the entire string—no truncation. Not `localhost`. |
 | `AUTH_SECRET` | Copy from your local `.env` or `.env.local` (same value as local). Or generate: `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Your deployment URL, e.g. **`https://mealio-gules.vercel.app`** or `https://mealio.vercel.app` (must match the URL in the redirect URI) |
 | `AUTH_TRUST_HOST` | Set to **`true`** so NextAuth trusts Vercel’s proxy (fixes “State cookie was missing” on Google sign-in) |

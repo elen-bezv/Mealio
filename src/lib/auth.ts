@@ -54,6 +54,20 @@ export function getAuthOptions(): NextAuthOptions {
     adapter: PrismaAdapter(prisma) as Adapter,
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
     useSecureCookies: isSecure,
+    cookies: {
+      // Ensure state cookie is sent when Google redirects back (cross-site GET).
+      // Defaults can fail on Vercel when signin and callback hit different instances.
+      state: {
+        name: `${isSecure ? "__Secure-" : ""}next-auth.state`,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          secure: isSecure,
+          maxAge: 900, // 15 min
+        },
+      },
+    },
     session: {
       strategy: "jwt",
       maxAge: 30 * 24 * 60 * 60, // 30 days
