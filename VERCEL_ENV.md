@@ -5,9 +5,9 @@ Use **Production** (and optionally Preview) for each.
 
 | Variable | Where to get the value |
 |----------|-------------------------|
-| `DATABASE_URL` | **Vercel Postgres:** Project → Storage → your Postgres DB → copy the connection string (e.g. `POSTGRES_URL`). Paste as `DATABASE_URL`. |
+| `DATABASE_URL` | **Must be a hosted Postgres URL, not localhost.** In Vercel: Project → **Storage** → **Create Database** → Postgres → use the connection string (e.g. `POSTGRES_URL`) as `DATABASE_URL`. Do **not** use `localhost:5432` on Vercel—it will fail. |
 | `AUTH_SECRET` | Copy from your local `.env` or `.env.local` (same value as local). Or generate: `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Your production URL: **`https://mealio.vercel.app`** (or your custom domain, e.g. `https://mealio.com`) |
+| `NEXTAUTH_URL` | Your deployment URL, e.g. **`https://mealio-gules.vercel.app`** or `https://mealio.vercel.app` (must match the URL in the redirect URI) |
 | `AUTH_GOOGLE_ID` | Copy from your local `.env` or `.env.local` |
 | `AUTH_GOOGLE_SECRET` | Copy from your local `.env` or `.env.local` |
 | `ENCRYPTION_KEY` | Copy from your local `.env` (same 32+ character secret as local) |
@@ -15,8 +15,14 @@ Use **Production** (and optionally Preview) for each.
 
 **After adding:**
 
-1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your OAuth client → **Authorized redirect URIs**, add:  
-   `https://mealio.vercel.app/api/auth/callback/google`  
-   (or your custom domain instead of `mealio.vercel.app`).
+1. **Google redirect URI**  
+   In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your OAuth 2.0 Client ID → **Authorized redirect URIs**, add **exactly** the URL your app shows on the login page when Google sign-in fails, e.g.:  
+   - `https://mealio-gules.vercel.app/api/auth/callback/google` (default Vercel URL), or  
+   - `https://mealio.vercel.app/api/auth/callback/google` (if you use that domain).  
+   Add every URL you use (production + preview if needed). Save the OAuth client.
 
-2. Redeploy the project (Vercel → Deployments → ⋮ on latest → Redeploy) so the new env vars are used.
+2. **Database**  
+   In Vercel: **Storage** → **Create Database** → Postgres. In the new DB’s tab, copy the connection string (e.g. `POSTGRES_URL`) and in **Settings → Environment Variables** set `DATABASE_URL` to that value (overwrite any `localhost` value). Then run migrations from your machine: set `DATABASE_URL` in your local `.env` to that same Vercel Postgres URL, run `npm run db:push` and `npm run db:seed`, then switch `.env` back to your local DB if you use one.
+
+3. **Redeploy**  
+   Vercel → Deployments → ⋮ on latest → Redeploy so new env vars are used.

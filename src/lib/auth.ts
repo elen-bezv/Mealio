@@ -47,9 +47,14 @@ export async function getUserLocale(userId: string): Promise<AppLocale> {
 /** Build auth options with env read at call time (so .env is always current). */
 export function getAuthOptions(): NextAuthOptions {
   const { id: googleClientId, secret: googleClientSecret, configured: googleConfigured } = getGoogleEnv();
+  const baseUrl = process.env.NEXTAUTH_URL ?? "";
+  const isSecure = baseUrl.startsWith("https://");
+
   return {
     adapter: PrismaAdapter(prisma) as Adapter,
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    trustHost: true,
+    useSecureCookies: isSecure,
     session: {
       strategy: "jwt",
       maxAge: 30 * 24 * 60 * 60, // 30 days
