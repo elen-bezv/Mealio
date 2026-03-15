@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:backfill-recipe-categories": "tsx prisma/backfill-recipe-categories.ts",
     "agent": "tsx src/agent/run.ts"
   },
   "dependencies": {

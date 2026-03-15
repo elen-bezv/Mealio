@@ -46,7 +46,8 @@ export async function GET(req: NextRequest) {
       const displayTitle = trans?.title ?? r.title;
       const displayDescription = trans?.description ?? r.description;
       const displayInstructions = trans?.instructions ?? null;
-      const categories = (r.recipeCategories ?? []).map((rc) => rc.category);
+      const recipeCategoryValues = (r.recipeCategories ?? []).map((rc) => rc.category);
+      const categories = recipeCategoryValues.length > 0 ? recipeCategoryValues : [RecipeCategory.OTHER];
       const ingredients = r.recipeIngredients.map((ri) => {
         let displayName = ri.ingredient.name;
         try {
