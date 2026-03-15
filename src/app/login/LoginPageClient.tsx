@@ -5,6 +5,35 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, ButtonSubmit, Input } from "@/components/ui";
 
+/** NextAuth OAuth error query param values (see https://next-auth.js.org/configuration/pages#error-page) */
+const OAUTH_ERROR_CODES = [
+  "OAuthSignin",
+  "OAuthCallback",
+  "OAuthCreateAccount",
+  "OAuthAccountNotLinked",
+  "Callback",
+  "AccessDenied",
+  "Configuration",
+] as const;
+
+function isOAuthError(error: string | null): error is (typeof OAUTH_ERROR_CODES)[number] {
+  return error != null && OAUTH_ERROR_CODES.includes(error as (typeof OAUTH_ERROR_CODES)[number]);
+}
+
+/** Short label for debugging; falls back to the raw code. */
+function oauthErrorLabel(error: string): string {
+  const labels: Record<string, string> = {
+    OAuthSignin: "OAuthSignin (redirect to provider failed)",
+    OAuthCallback: "OAuthCallback (callback handler error)",
+    OAuthCreateAccount: "OAuthCreateAccount (create user failed)",
+    OAuthAccountNotLinked: "OAuthAccountNotLinked (email already used with another provider)",
+    Callback: "Callback (general callback error)",
+    AccessDenied: "AccessDenied (user denied or access restricted)",
+    Configuration: "Configuration (provider or server misconfigured)",
+  };
+  return labels[error] ?? error;
+}
+
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +44,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const errorParam = searchParams.get("error");
-  const isGoogleCallbackError = errorParam === "google" || errorParam === "OAuthAccountNotLinked";
+  const isOAuthErrorParam = errorParam === "google" || isOAuthError(errorParam);
 
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -29,12 +58,17 @@ function LoginForm() {
     if (res?.ok) router.push(callbackUrl);
   }
 
-  function handleGoogleSignIn() {
+  async function handleGoogleSignIn() {
     setGoogleError(null);
     setGoogleLoading(true);
-    // Redirect directly to NextAuth's Google sign-in endpoint so the server handles OAuth
-    const params = new URLSearchParams({ callbackUrl });
-    window.location.href = `/api/auth/signin/google?${params.toString()}`;
+    try {
+      await signIn("google", { callbackUrl });
+      // If we get here, NextAuth did not redirect (e.g. provider misconfigured or error returned)
+      setGoogleLoading(false);
+    } catch (err) {
+      setGoogleLoading(false);
+      setGoogleError(err instanceof Error ? err.message : "Google sign-in failed");
+    }
   }
 
   return (
@@ -53,7 +87,7 @@ function LoginForm() {
           Recipe to cart, across stores.
         </p>
 
-        {isGoogleCallbackError && (
+        {isOAuthErrorParam && (
           <div
             className="card border-amber-500/30 bg-amber-500/10"
             style={{ padding: "var(--spacing-4)", marginBottom: "var(--spacing-6)" }}
@@ -61,6 +95,9 @@ function LoginForm() {
           >
             <p className="font-medium text-amber-400" style={{ marginBottom: "var(--spacing-2)" }}>
               Google sign-in didn’t complete
+              {errorParam && errorParam !== "google" && (
+                <span className="ml-2 font-normal text-amber-300/90">({oauthErrorLabel(errorParam)})</span>
+              )}
             </p>
             <p className="text-[var(--text-body-sm)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-3)" }}>
               Usually this is due to:
