@@ -17,7 +17,7 @@
 
   /* Accent (restrained use) */
   --accent: #22c55e;
-  --accent-hover: #16a34a;
+  --accent-hover: #15803d; /* darker on hover, still clearly visible */
   --accent-muted: rgba(34, 197, 94, 0.15);
 
   /* Borders */
@@ -205,6 +205,7 @@ main {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  color: var(--text-inverse);
 }
 
 .btn-secondary {

@@ -8,12 +8,23 @@ import {
   parseFromImage,
   parseFromPdf,
   findDuplicateTitle,
+  toApiResult,
 } from "@/services/recipe-parser-pro";
-import type { ParseRecipeProResult } from "@/types";
+import { normalizeUrl } from "@/lib/import-utils";
+import type { ParseRecipeProResult, ParseStatus } from "@/types";
 
 export const maxDuration = 60;
 
+function importLogger(importId: string) {
+  return (msg: string, data?: Record<string, unknown>) => {
+    console.log(`[recipe-import ${importId}] ${msg}`, data ?? "");
+  };
+}
+
 export async function POST(req: NextRequest) {
+  const importId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const log = importLogger(importId);
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -33,13 +44,52 @@ export async function POST(req: NextRequest) {
         text?: string;
       };
 
-      if (url && (type === "url" || type === "instagram" || type === "tiktok" || !type)) {
-        const parsed = await parseFromUrl(url);
-        result = { recipe: parsed.recipe, warnings: parsed.warnings };
-      } else if (text) {
-        const sourceType = type === "url" ? "text" : type ?? "text";
-        const parsed = await parseFromText(text, sourceType);
-        result = { recipe: parsed.recipe, warnings: parsed.warnings };
+      if (url != null && String(url).trim()) {
+        const rawUrl = String(url).trim();
+        const normalized = normalizeUrl(rawUrl);
+        if (!normalized) {
+          log("invalid URL", { rawUrl: rawUrl.slice(0, 100) });
+          return NextResponse.json(
+            { error: "Invalid URL provided." },
+            { status: 400 }
+          );
+        }
+        log("submitted URL", { normalized, sourceType: body.type });
+        try {
+          const parsed = await parseFromUrl(normalized, log);
+          const existing = await prisma.recipe.findMany({
+            where: { userId, isBuiltIn: false },
+            select: { id: true, title: true },
+          });
+          const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+          result = toApiResult(parsed, duplicate, log);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "Recipe import failed.";
+          log("parseFromUrl error", { error: message });
+          result = {
+            recipe: {
+              title: "",
+              description: undefined,
+              ingredients: [],
+              instructions: [],
+              sourceType: "url",
+            },
+            parseStatus: "failed",
+            confidence: "low",
+            errorMessage: message,
+            sourceType: "url",
+          };
+        }
+      } else if (text != null && String(text).trim()) {
+        const sourceType = (type === "url" ? "text" : type) ?? "text";
+        log("parse text", { textLength: String(text).trim().length, sourceType });
+        const parsed = await parseFromText(String(text).trim(), sourceType as "text", log);
+        const existing = await prisma.recipe.findMany({
+          where: { userId, isBuiltIn: false },
+          select: { id: true, title: true },
+        });
+        const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+        result = toApiResult(parsed, duplicate, log);
       } else {
         return NextResponse.json(
           { error: "Provide url or text in JSON body" },
@@ -53,26 +103,67 @@ export async function POST(req: NextRequest) {
       const url = formData.get("url") as string | null;
       const type = (formData.get("type") as string) || "text";
 
+      const existing = await prisma.recipe.findMany({
+        where: { userId, isBuiltIn: false },
+        select: { id: true, title: true },
+      });
+
       if (file) {
         const buf = await file.arrayBuffer();
         const buffer = Buffer.from(buf);
         const mime = (file.type || "").toLowerCase();
+        log("parse file", { mime, size: buffer.length });
 
         if (mime === "application/pdf") {
-          const parsed = await parseFromPdf(buffer);
-          result = { recipe: parsed.recipe, warnings: parsed.warnings };
+          try {
+            const parsed = await parseFromPdf(buffer, log);
+            const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+            result = toApiResult(parsed, duplicate, log);
+          } catch (e) {
+            const message = e instanceof Error ? e.message : "PDF parse failed.";
+            log("parseFromPdf error", { error: message });
+            result = {
+              recipe: { title: "", description: undefined, ingredients: [], instructions: [], sourceType: "pdf" },
+              parseStatus: "failed",
+              confidence: "low",
+              errorMessage: message,
+              sourceType: "pdf",
+            };
+          }
         } else {
           const base64 = buffer.toString("base64");
           const mimeType = mime || "image/png";
-          const parsed = await parseFromImage(base64, mimeType);
-          result = { recipe: parsed.recipe, warnings: parsed.warnings };
+          const parsed = await parseFromImage(base64, mimeType, log);
+          const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+          result = toApiResult(parsed, duplicate, log);
         }
-      } else if (url) {
-        const parsed = await parseFromUrl(url);
-        result = { recipe: parsed.recipe, warnings: parsed.warnings };
-      } else if (text) {
-        const parsed = await parseFromText(text, type as "text");
-        result = { recipe: parsed.recipe, warnings: parsed.warnings };
+      } else if (url != null && String(url).trim()) {
+        const rawUrl = String(url).trim();
+        const normalized = normalizeUrl(rawUrl);
+        if (!normalized) {
+          return NextResponse.json(
+            { error: "Invalid URL provided." },
+            { status: 400 }
+          );
+        }
+        try {
+          const parsed = await parseFromUrl(normalized, log);
+          const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+          result = toApiResult(parsed, duplicate, log);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "Recipe import failed.";
+          result = {
+            recipe: { title: "", description: undefined, ingredients: [], instructions: [], sourceType: "url" },
+            parseStatus: "failed",
+            confidence: "low",
+            errorMessage: message,
+            sourceType: "url",
+          };
+        }
+      } else if (text != null && String(text).trim()) {
+        const parsed = await parseFromText(String(text).trim(), (type as "text") || "text", log);
+        const duplicate = findDuplicateTitle(parsed.recipe.title, existing);
+        result = toApiResult(parsed, duplicate, log);
       } else {
         return NextResponse.json(
           { error: "Provide file, url, or text" },
@@ -86,21 +177,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.recipe.findMany({
-      where: { userId, isBuiltIn: false },
-      select: { id: true, title: true },
-    });
-    const duplicate = findDuplicateTitle(result.recipe.title, existing);
-    if (duplicate) {
-      result.duplicateRecipeId = duplicate.id;
-      result.duplicateRecipeTitle = duplicate.title;
-    }
-
+    log("response", { parseStatus: result.parseStatus, errorMessage: result.errorMessage ?? undefined });
     return NextResponse.json(result);
   } catch (e) {
-    console.error("parse-recipe-pro", e);
+    console.error(`[recipe-import ${importId}]`, e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Parse failed" },
+      {
+        error: e instanceof Error ? e.message : "Parse failed",
+        parseStatus: "failed" as ParseStatus,
+        recipe: {
+          title: "",
+          description: undefined,
+          ingredients: [],
+          instructions: [],
+        },
+        errorMessage: e instanceof Error ? e.message : "Parse failed",
+      },
       { status: 500 }
     );
   }

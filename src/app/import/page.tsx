@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card, Button, Input, Textarea } from "@/components/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import type { StructuredRecipe, ParserWarning, StructuredIngredient } from "@/types";
+import type { ParseRecipeProResult, StructuredRecipe, ParserWarning, StructuredIngredient } from "@/types";
 
 type InputMode = "url" | "text" | "file";
 
@@ -14,18 +14,14 @@ async function parseRecipePro(payload: {
   url?: string;
   text?: string;
   file?: File;
-}): Promise<{
-  recipe: StructuredRecipe;
-  warnings?: ParserWarning;
-  duplicateRecipeId?: string;
-  duplicateRecipeTitle?: string;
-}> {
+}): Promise<ParseRecipeProResult> {
   if (payload.type === "file" && payload.file) {
     const form = new FormData();
     form.set("file", payload.file);
     const r = await fetch("/api/parse-recipe-pro", { method: "POST", body: form });
-    if (!r.ok) throw new Error((await r.json()).error ?? "Parse failed");
-    return r.json();
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ?? "Parse failed");
+    return data;
   }
   if (payload.type === "url" && payload.url) {
     const r = await fetch("/api/parse-recipe-pro", {
@@ -33,8 +29,9 @@ async function parseRecipePro(payload: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "url", url: payload.url }),
     });
-    if (!r.ok) throw new Error((await r.json()).error ?? "Parse failed");
-    return r.json();
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ?? "Parse failed");
+    return data;
   }
   if (payload.text) {
     const r = await fetch("/api/parse-recipe-pro", {
@@ -42,8 +39,9 @@ async function parseRecipePro(payload: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "text", text: payload.text }),
     });
-    if (!r.ok) throw new Error((await r.json()).error ?? "Parse failed");
-    return r.json();
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ?? "Parse failed");
+    return data;
   }
   throw new Error("Missing input");
 }
@@ -111,12 +109,7 @@ export default function ImportPage() {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<{
-    recipe: StructuredRecipe;
-    warnings?: ParserWarning;
-    duplicateRecipeId?: string;
-    duplicateRecipeTitle?: string;
-  } | null>(null);
+  const [preview, setPreview] = useState<ParseRecipeProResult | null>(null);
   const [duplicateAction, setDuplicateAction] = useState<"overwrite" | "copy" | "cancel" | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -124,8 +117,11 @@ export default function ImportPage() {
   const parseMutation = useMutation({
     mutationFn: parseRecipePro,
     onSuccess: (data) => setPreview(data),
-    onError: (e: Error) => setPreview(null),
+    onError: () => setPreview(null),
   });
+
+  const isFailedImport = preview?.parseStatus === "failed";
+  const showPreviewCard = preview && !isFailedImport && preview.recipe;
 
   const saveMutation = useMutation({
     mutationFn: saveRecipe,
@@ -258,9 +254,30 @@ export default function ImportPage() {
           )}
         </Card>
 
-        {preview?.recipe && (
+        {isFailedImport && preview?.errorMessage && (
+          <Card className="card border-red-500/30 bg-red-500/10" style={{ marginBottom: "var(--spacing-6)", padding: "var(--spacing-6)" }}>
+            <h2 className="section-title text-red-400" style={{ marginBottom: "var(--spacing-2)" }}>Import failed</h2>
+            <p className="text-[var(--text-body)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-4)" }}>
+              {preview.errorMessage}
+            </p>
+            <p className="text-[var(--text-body-sm)] text-[var(--text-tertiary)]" style={{ marginBottom: "var(--spacing-4)" }}>
+              You can try pasting the recipe text directly, or use a different source or screenshot.
+            </p>
+            <Button variant="secondary" onClick={() => setPreview(null)}>
+              Try again
+            </Button>
+          </Card>
+        )}
+
+        {showPreviewCard && (
           <Card style={{ marginBottom: "var(--spacing-6)" }}>
             <h2 className="section-title">Preview</h2>
+
+            {preview.parseStatus === "partial" && preview.errorMessage && (
+              <div className="card border-amber-500/30 bg-amber-500/10" style={{ padding: "var(--spacing-4)", marginBottom: "var(--spacing-6)" }} role="alert">
+                <p className="text-[var(--text-body-sm)] text-amber-400">{preview.errorMessage}</p>
+              </div>
+            )}
 
             {preview.duplicateRecipeId && !duplicateAction && (
               <div className="card border-amber-500/30 bg-amber-500/10" style={{ padding: "var(--spacing-4)", marginBottom: "var(--spacing-6)" }}>

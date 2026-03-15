@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card, Button, Input, Textarea, LoadingFallback } from "@/components/ui";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import type { ParseRecipeResult } from "@/types";
+
+type RecipeItem = {
+  id: string;
+  title: string;
+  displayTitle?: string;
+  category: string;
+  isBuiltIn?: boolean;
+  recipeIngredients: { length: number }[];
+};
 
 async function fetchRecipes() {
   const r = await fetch("/api/recipes");
@@ -38,19 +47,36 @@ async function createRecipe(data: {
   return r.json();
 }
 
+async function deleteRecipe(id: string) {
+  const r = await fetch(`/api/recipes/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error((await r.json()).error ?? "Delete failed");
+}
+
 function LibraryContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [inputMode, setInputMode] = useState<"text" | "url">("text");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [parsed, setParsed] = useState<ParseRecipeResult | null>(null);
   const [parseLoading, setParseLoading] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (searchParams.get("upload") === "1") setUploadOpen(true);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!menuOpenId) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpenId(null);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpenId]);
 
   const { data: recipes, isLoading } = useQuery({
     queryKey: ["recipes"],
@@ -66,7 +92,15 @@ function LibraryContent() {
     },
   });
 
-  const userRecipes = Array.isArray(recipes) ? recipes.filter((r: { isBuiltIn?: boolean }) => !r.isBuiltIn) : [];
+  const deleteMutation = useMutation({
+    mutationFn: deleteRecipe,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      setMenuOpenId(null);
+    },
+  });
+
+  const userRecipes = Array.isArray(recipes) ? recipes.filter((r: RecipeItem) => !r.isBuiltIn) : [];
 
   async function handleParse() {
     setParseLoading(true);
@@ -131,11 +165,95 @@ function LibraryContent() {
           <p className="text-[var(--text-secondary)]">Loading…</p>
         ) : (
           <div className="grid gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-3" style={{ marginBottom: "var(--spacing-8)" }}>
-            {userRecipes.map((r: { id: string; title: string; displayTitle?: string; category: string; recipeIngredients: { length: number }[] }) => (
-              <Card key={r.id} interactive>
-                <h3 className="font-semibold text-[var(--text-body)]" style={{ marginBottom: "var(--spacing-1)" }}>{r.displayTitle ?? r.title}</h3>
+            {userRecipes.map((r: RecipeItem) => (
+              <div
+                key={r.id}
+                className="card card-interactive cursor-pointer"
+                style={{ position: "relative", padding: "var(--spacing-4)" }}
+                onClick={() => router.push(`/library/${r.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/library/${r.id}`);
+                  }
+                }}
+              >
+                <div
+                  ref={menuOpenId === r.id ? menuRef : undefined}
+                  className="absolute"
+                  style={{ top: "var(--spacing-2)", right: "var(--spacing-2)" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="rounded p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    aria-label="Recipe menu"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenId((id) => (id === r.id ? null : r.id));
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <circle cx="12" cy="6" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="12" cy="18" r="1.5" />
+                    </svg>
+                  </button>
+                  {menuOpenId === r.id && (
+                    <div
+                      className="card border-[var(--border-default)]"
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "100%",
+                        marginTop: "var(--spacing-1)",
+                        minWidth: "140px",
+                        padding: "var(--spacing-1)",
+                        zIndex: 10,
+                        background: "var(--bg-card)",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="block w-full rounded px-3 py-2 text-left text-[var(--text-body-sm)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-body)]"
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          router.push(`/library/${r.id}`);
+                        }}
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full rounded px-3 py-2 text-left text-[var(--text-body-sm)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-body)]"
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          router.push(`/library/${r.id}?edit=1`);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full rounded px-3 py-2 text-left text-[var(--text-body-sm)] text-red-400 hover:bg-red-500/10"
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          if (typeof window !== "undefined" && window.confirm("Delete this recipe?")) {
+                            deleteMutation.mutate(r.id);
+                          }
+                        }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-semibold text-[var(--text-body)] pr-8" style={{ marginBottom: "var(--spacing-1)" }}>{r.displayTitle ?? r.title}</h3>
                 <p className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--text-body-sm)" }}>{r.category} · {r.recipeIngredients?.length ?? 0} ingredients</p>
-              </Card>
+              </div>
             ))}
             {userRecipes.length === 0 && !uploadOpen && (
               <p className="col-span-full text-[var(--text-secondary)]" style={{ padding: "var(--spacing-6)" }}>No recipes yet. Upload a recipe to get started.</p>

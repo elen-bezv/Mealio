@@ -54,12 +54,23 @@ export interface ParserWarning {
   suggested?: { ingredientIndex: number; ingredientName: string; suggestion: string }[];
 }
 
+/** Parser outcome: success (meaningful data), partial (some data missing), or failed */
+export type ParseStatus = "success" | "partial" | "failed";
+
 export interface ParseRecipeProResult {
   recipe: StructuredRecipe;
   warnings?: ParserWarning;
   /** If set, a recipe with similar title already exists (for duplicate handling) */
   duplicateRecipeId?: string;
   duplicateRecipeTitle?: string;
+  /** Parser outcome; failed = do not show as successful preview */
+  parseStatus: ParseStatus;
+  /** high | medium | low */
+  confidence?: "high" | "medium" | "low";
+  /** When parseStatus is failed, or partial with caveats */
+  errorMessage?: string | null;
+  /** Source type detected (instagram, tiktok, url, etc.) */
+  sourceType?: string;
 }
 
 export interface MergedShoppingItem {
