@@ -59,7 +59,7 @@ async function parseRecipePro(payload: {
 async function saveRecipe(data: {
   title: string;
   description?: string;
-  category: RecipeCategory;
+  categories: RecipeCategory[];
   sourceUrl?: string;
   sourceType?: string;
   ingredients: StructuredIngredient[];
@@ -71,7 +71,7 @@ async function saveRecipe(data: {
     body: JSON.stringify({
       title: data.title,
       description: data.description,
-      category: data.category,
+      categories: data.categories,
       sourceUrl: data.sourceUrl,
       sourceType: data.sourceType,
       instructions: data.instructions,
@@ -94,7 +94,7 @@ async function overwriteRecipe(
   data: {
     title: string;
     description?: string;
-    category?: RecipeCategory;
+    categories?: RecipeCategory[];
     ingredients: StructuredIngredient[];
   }
 ) {
@@ -104,7 +104,7 @@ async function overwriteRecipe(
     body: JSON.stringify({
       title: data.title,
       description: data.description,
-      category: data.category,
+      categories: data.categories,
       ingredients: data.ingredients.map((i) => ({
         name: i.name,
         quantity: i.quantity,
@@ -124,7 +124,7 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ParseRecipeProResult | null>(null);
   const [duplicateAction, setDuplicateAction] = useState<"overwrite" | "copy" | "cancel" | null>(null);
-  const [saveCategory, setSaveCategory] = useState<RecipeCategory>("OTHER");
+  const [saveCategories, setSaveCategories] = useState<RecipeCategory[]>(["OTHER"]);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -135,10 +135,10 @@ export default function ImportPage() {
   });
 
   const pdfImportMutation = useMutation({
-    mutationFn: async ({ file: pdfFile, category }: { file: File; category: RecipeCategory }) => {
+    mutationFn: async ({ file: pdfFile, categories }: { file: File; categories: RecipeCategory[] }) => {
       const form = new FormData();
       form.set("file", pdfFile);
-      form.set("category", category);
+      form.set("categories", JSON.stringify(categories.length ? categories : ["OTHER"]));
       const r = await fetch("/api/recipes/import-pdf", { method: "POST", body: form });
       if (!r.ok) throw new Error((await r.json()).error ?? "Import failed");
       return r.json() as Promise<{ imported: number; recipeIds: string[] }>;
@@ -161,7 +161,7 @@ export default function ImportPage() {
   });
 
   const overwriteMutation = useMutation({
-    mutationFn: ({ recipeId, data }: { recipeId: string; data: { title: string; description?: string; category?: RecipeCategory; ingredients: StructuredIngredient[] } }) =>
+    mutationFn: ({ recipeId, data }: { recipeId: string; data: { title: string; description?: string; categories?: RecipeCategory[]; ingredients: StructuredIngredient[] } }) =>
       overwriteRecipe(recipeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
@@ -185,7 +185,7 @@ export default function ImportPage() {
         data: {
           title: recipe.title,
           description: recipe.description,
-          category: saveCategory,
+          categories: saveCategories.length ? saveCategories : ["OTHER"],
           ingredients: recipe.ingredients,
         },
       });
@@ -194,7 +194,7 @@ export default function ImportPage() {
     saveMutation.mutate({
       title: recipe.title,
       description: recipe.description,
-      category: saveCategory,
+      categories: saveCategories.length ? saveCategories : ["OTHER"],
       sourceUrl: recipe.sourceUrl,
       sourceType: recipe.sourceType,
       instructions: recipe.instructions,
@@ -280,21 +280,30 @@ export default function ImportPage() {
             </Button>
             {mode === "file" && file?.type === "application/pdf" && (
               <>
-                <label className="text-[var(--text-body-sm)] text-[var(--text-secondary)] flex items-center gap-2">
-                  <span>Category for imported recipes:</span>
-                  <select
-                    value={saveCategory}
-                    onChange={(e) => setSaveCategory(e.target.value as RecipeCategory)}
-                    className="rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-input)] px-2 py-1.5 text-[var(--text-primary)]"
-                  >
-                    {RECIPE_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                    ))}
-                  </select>
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[var(--text-body-sm)] text-[var(--text-secondary)]">Categories for imported recipes:</span>
+                  {RECIPE_CATEGORIES.map((c) => {
+                    const selected = saveCategories.includes(c);
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setSaveCategories((prev) => selected ? prev.filter((x) => x !== c) : [...prev, c])}
+                        className="rounded-full px-2.5 py-1 text-[var(--text-caption)] font-medium transition-colors"
+                        style={{
+                          background: selected ? "var(--accent)" : "var(--bg-input)",
+                          color: selected ? "var(--text-inverse)" : "var(--text-secondary)",
+                          border: selected ? "none" : "1px solid var(--border-default)",
+                        }}
+                      >
+                        {CATEGORY_LABELS[c]}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Button
                   variant="secondary"
-                  onClick={() => pdfImportMutation.mutate({ file, category: saveCategory })}
+                  onClick={() => pdfImportMutation.mutate({ file, categories: saveCategories.length ? saveCategories : ["OTHER"] })}
                   disabled={pdfImportMutation.isPending}
                 >
                   {pdfImportMutation.isPending ? "Adding recipes…" : "Add all recipes from PDF to library"}
@@ -406,17 +415,28 @@ export default function ImportPage() {
             )}
 
             <div className="input-wrap" style={{ marginBottom: "var(--spacing-6)" }}>
-              <label className="input-label">Category</label>
-              <select
-                value={saveCategory}
-                onChange={(e) => setSaveCategory(e.target.value as RecipeCategory)}
-                className="w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[var(--text-body)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
-                style={{ height: "var(--input-height)", fontSize: "var(--text-body-sm)", maxWidth: "200px" }}
-              >
-                {RECIPE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                ))}
-              </select>
+              <label className="input-label">Categories</label>
+              <div className="flex flex-wrap gap-2" style={{ marginTop: "var(--spacing-2)" }}>
+                {RECIPE_CATEGORIES.map((c) => {
+                  const selected = saveCategories.includes(c);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSaveCategories((prev) => selected ? prev.filter((x) => x !== c) : [...prev, c])}
+                      className="rounded-full px-3 py-1.5 text-[var(--text-body-sm)] font-medium transition-colors"
+                      style={{
+                        background: selected ? "var(--accent)" : "var(--bg-input)",
+                        color: selected ? "var(--text-inverse)" : "var(--text-secondary)",
+                        border: selected ? "none" : "1px solid var(--border-default)",
+                      }}
+                    >
+                      {CATEGORY_LABELS[c]}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="input-helper" style={{ marginTop: "var(--spacing-1)" }}>Select one or more. If none, Other is used.</p>
             </div>
 
             <div className="flex flex-wrap gap-[var(--spacing-3)]">

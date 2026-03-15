@@ -8,6 +8,27 @@ import type { StructuredRecipe, StructuredIngredient } from "@/types";
 export const maxDuration = 120;
 const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
 
+const VALID_CATEGORIES = ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"] as const;
+
+function parseCategoriesFormData(formData: FormData): RecipeCategory[] {
+  const raw = formData.get("categories");
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const filtered = parsed.filter((c): c is RecipeCategory =>
+          typeof c === "string" && VALID_CATEGORIES.includes(c as typeof VALID_CATEGORIES[number])
+        );
+        if (filtered.length) return [...new Set(filtered)];
+      }
+    } catch {}
+  }
+  const single = (formData.get("category") as string) || "OTHER";
+  return VALID_CATEGORIES.includes(single as typeof VALID_CATEGORIES[number])
+    ? [single as RecipeCategory]
+    : [RecipeCategory.OTHER];
+}
+
 /**
  * POST: Upload a PDF (e.g. recipe book), parse it, and insert all extracted
  * recipes directly into Recipe Library. No separate cookbook destination.
@@ -17,10 +38,7 @@ export async function POST(req: NextRequest) {
     const userId = await getRequireUserId();
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const defaultCategory = (formData.get("category") as string) || "OTHER";
-    const validCategory = ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"].includes(defaultCategory)
-      ? (defaultCategory as RecipeCategory)
-      : RecipeCategory.OTHER;
+    const validCategories = parseCategoriesFormData(formData);
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     if (file.type !== "application/pdf") return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 });
@@ -46,7 +64,7 @@ export async function POST(req: NextRequest) {
           preparation: i.preparation ?? null,
         })),
         instructions: rec.instructions ?? [],
-        category: validCategory,
+        categories: validCategories,
         sourceType: "pdf",
         cookbookId: null,
         prepTimeMinutes: rec.prepTimeMinutes ?? null,

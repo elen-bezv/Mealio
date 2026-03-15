@@ -26,6 +26,7 @@ export async function GET(
   let recipe = await prisma.recipe.findUnique({
     where: { id },
     include: {
+      recipeCategories: true,
       recipeIngredients: { include: { ingredient: true } },
       tags: true,
       recipeTranslations: true,
@@ -86,6 +87,7 @@ export async function GET(
       const updatedRecipe = await prisma.recipe.findUnique({
         where: { id },
         include: {
+          recipeCategories: true,
           recipeIngredients: { include: { ingredient: true } },
           tags: true,
           recipeTranslations: true,
@@ -117,9 +119,12 @@ export async function GET(
     return { ...ri, displayName };
   });
 
+  const categories = (recipe.recipeCategories ?? []).map((rc) => rc.category);
   return NextResponse.json({
     ...recipe,
     recipeTranslations: undefined,
+    recipeCategories: undefined,
+    categories,
     displayTitle,
     displayDescription,
     displayInstructions,
@@ -142,7 +147,7 @@ export async function PATCH(
   const {
     title,
     description,
-    category,
+    categories: categoriesBody,
     ingredients,
     tags,
     translation,
@@ -150,16 +155,28 @@ export async function PATCH(
 
   if (title !== undefined) existing.title = title;
   if (description !== undefined) existing.description = description;
-  if (category !== undefined) existing.category = category as RecipeCategory;
 
   await prisma.recipe.update({
     where: { id },
     data: {
       title: existing.title,
       description: existing.description,
-      category: existing.category,
     },
   });
+
+  if (categoriesBody !== undefined) {
+    const categories =
+      Array.isArray(categoriesBody) && categoriesBody.length > 0
+        ? [...new Set(categoriesBody)].filter((c): c is RecipeCategory =>
+            ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"].includes(c)
+          )
+        : [RecipeCategory.OTHER];
+    await prisma.recipeCategoryAssignment.deleteMany({ where: { recipeId: id } });
+    await prisma.recipeCategoryAssignment.createMany({
+      data: categories.map((category) => ({ recipeId: id, category })),
+      skipDuplicates: true,
+    });
+  }
 
   if (
     translation &&
@@ -245,9 +262,15 @@ export async function PATCH(
 
   const full = await prisma.recipe.findUnique({
     where: { id },
-    include: { recipeIngredients: { include: { ingredient: true } }, tags: true },
+    include: {
+      recipeCategories: true,
+      recipeIngredients: { include: { ingredient: true } },
+      tags: true,
+    },
   });
-  return NextResponse.json(full);
+  if (!full) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const categories = (full.recipeCategories ?? []).map((rc) => rc.category);
+  return NextResponse.json({ ...full, recipeCategories: undefined, categories });
 }
 
 export async function DELETE(

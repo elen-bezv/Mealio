@@ -29,7 +29,7 @@ type RecipeDetail = {
   id: string;
   title: string;
   description: string | null;
-  category: string;
+  categories: string[];
   displayTitle: string;
   displayDescription: string | null;
   displayInstructions: string[] | null;
@@ -51,7 +51,7 @@ async function updateRecipe(
   data: {
     title: string;
     description?: string | null;
-    category?: string;
+    categories?: RecipeCategory[];
     ingredients: { name: string; quantity: string; unit?: string | null }[];
   }
 ) {
@@ -61,7 +61,7 @@ async function updateRecipe(
     body: JSON.stringify({
       title: data.title,
       description: data.description ?? null,
-      category: data.category,
+      categories: data.categories,
       ingredients: data.ingredients.map((ing) => ({
         name: ing.name,
         quantity: ing.quantity,
@@ -108,7 +108,7 @@ export default function RecipeDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editCategory, setEditCategory] = useState<RecipeCategory>("OTHER");
+  const [editCategories, setEditCategories] = useState<RecipeCategory[]>(["OTHER"]);
   const [editIngredients, setEditIngredients] = useState<{ name: string; quantity: string; unit?: string | null }[]>([]);
 
   const { data: recipe, isLoading, error } = useQuery({
@@ -121,9 +121,9 @@ export default function RecipeDetailPage() {
     if (recipe) {
       setEditTitle(recipe.displayTitle);
       setEditDescription(recipe.displayDescription ?? "");
-      setEditCategory(
-        RECIPE_CATEGORIES.includes(recipe.category as RecipeCategory) ? (recipe.category as RecipeCategory) : "OTHER"
-      );
+      const raw = recipe.categories ?? ((recipe as { category?: string }).category ? [(recipe as { category: string }).category] : []);
+      const cats = raw.filter((c): c is RecipeCategory => RECIPE_CATEGORIES.includes(c as RecipeCategory));
+      setEditCategories(cats.length ? cats : ["OTHER"]);
       setEditIngredients(
         recipe.recipeIngredients.map((ri) => ({
           name: ri.displayName,
@@ -200,7 +200,7 @@ export default function RecipeDetailPage() {
                     updateMutation.mutate({
                       title: editTitle,
                       description: editDescription || null,
-                      category: editCategory,
+                      categories: editCategories.length ? editCategories : ["OTHER"],
                       ingredients: editIngredients,
                     })
                   }
@@ -233,7 +233,9 @@ export default function RecipeDetailPage() {
             <>
               <h1 className="page-title" style={{ marginBottom: "var(--spacing-2)" }}>{recipe.displayTitle}</h1>
               <p className="text-[var(--text-body-sm)] text-[var(--text-tertiary)]" style={{ marginBottom: "var(--spacing-4)" }}>
-                {CATEGORY_LABELS[recipe.category as RecipeCategory] ?? recipe.category}
+                {(recipe.categories ?? []).length
+                  ? (recipe.categories as string[]).map((c) => CATEGORY_LABELS[c as RecipeCategory] ?? c).join(", ")
+                  : "Other"}
               </p>
               {recipe.displayDescription && (
                 <p className="text-[var(--text-body)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-6)" }}>
@@ -278,21 +280,33 @@ export default function RecipeDetailPage() {
                 <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
               </div>
               <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>
-                <label className="input-label">Category</label>
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value as RecipeCategory)}
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[var(--text-body)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
-                  style={{ height: "var(--input-height)", fontSize: "var(--text-body-sm)" }}
-                >
-                  {RECIPE_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </option>
-                  ))}
-                </select>
+                <label className="input-label">Categories</label>
+                <div className="flex flex-wrap gap-2" style={{ marginTop: "var(--spacing-2)" }}>
+                  {RECIPE_CATEGORIES.map((c) => {
+                    const selected = editCategories.includes(c);
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setEditCategories((prev) =>
+                            selected ? prev.filter((x) => x !== c) : [...prev, c]
+                          );
+                        }}
+                        className="rounded-full px-3 py-1.5 text-[var(--text-body-sm)] font-medium transition-colors"
+                        style={{
+                          background: selected ? "var(--accent)" : "var(--bg-input)",
+                          color: selected ? "var(--text-inverse)" : "var(--text-secondary)",
+                          border: selected ? "none" : "1px solid var(--border-default)",
+                        }}
+                      >
+                        {CATEGORY_LABELS[c]}
+                      </button>
+                    );
+                  })}
+                </div>
                 <p className="input-helper" style={{ marginTop: "var(--spacing-1)" }}>
-                  Used for filtering in Recipe Library.
+                  Select one or more. Used for filtering in Recipe Library.
                 </p>
               </div>
               <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>

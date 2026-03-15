@@ -40,20 +40,20 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  locale        String?   @default("uk") // uk | en | he
-  accounts      Account[]
-  sessions      Session[]
-  recipes       Recipe[]
-  mealPlans     MealPlan[]
-  shoppingLists ShoppingList[]
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  locale           String?           @default("uk") // uk | en | he
+  accounts         Account[]
+  sessions         Session[]
+  recipes          Recipe[]
+  mealPlans        MealPlan[]
+  shoppingLists    ShoppingList[]
   storeConnections StoreConnection[]
-  cookbooks     Cookbook[]
-  pantryItems   PantryItem[]
+  cookbooks        Cookbook[]
+  pantryItems      PantryItem[]
 }
 
 model VerificationToken {
@@ -78,13 +78,12 @@ model Recipe {
   id               String   @id @default(cuid())
   userId           String?
   cookbookId       String?
-  title            String   // original title
+  title            String // original title
   description      String?  @db.Text // original description
-  originalLanguage String?  // en | uk | he | ru | es | fr | it
+  originalLanguage String? // en | uk | he | ru | es | fr | it
   sourceUrl        String?  @db.Text
-  sourceType       String?  // text | image | pdf | url
+  sourceType       String? // text | image | pdf | url
   imageUrl         String?  @db.Text
-  category         RecipeCategory @default(OTHER)
   isBuiltIn        Boolean  @default(false)
   prepTimeMinutes  Int?
   cookTimeMinutes  Int?
@@ -93,20 +92,32 @@ model Recipe {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  cookbook     Cookbook?        @relation(fields: [cookbookId], references: [id], onDelete: SetNull)
-  recipeIngredients RecipeIngredient[]
+  user               User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cookbook           Cookbook?                  @relation(fields: [cookbookId], references: [id], onDelete: SetNull)
+  recipeCategories   RecipeCategoryAssignment[]
+  recipeIngredients  RecipeIngredient[]
   recipeTranslations RecipeTranslation[]
-  tags         RecipeTag[]
-  mealPlanRecipes MealPlanRecipe[]
+  tags               RecipeTag[]
+  mealPlanRecipes    MealPlanRecipe[]
+}
+
+model RecipeCategoryAssignment {
+  id       String         @id @default(cuid())
+  recipeId String
+  category RecipeCategory
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, category])
+  @@index([recipeId])
 }
 
 model RecipeTranslation {
-  id          String   @id @default(cuid())
-  recipeId    String
-  language    String   // uk | en | he
-  title       String
-  description String?  @db.Text
+  id           String  @id @default(cuid())
+  recipeId     String
+  language     String // uk | en | he
+  title        String
+  description  String? @db.Text
   instructions String? @db.Text // JSON array of steps
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -116,14 +127,14 @@ model RecipeTranslation {
 }
 
 model Cookbook {
-  id           String   @id @default(cuid())
-  userId       String
-  name         String
-  status       String   @default("processing") // processing | ready | failed
-  parsedRecipes String? @db.Text // JSON array of StructuredRecipe for preview/import
-  errorMessage String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  status        String   @default("processing") // processing | ready | failed
+  parsedRecipes String?  @db.Text // JSON array of StructuredRecipe for preview/import
+  errorMessage  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipes Recipe[]
@@ -132,7 +143,7 @@ model Cookbook {
 }
 
 model RecipeTag {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   recipeId String
   name     String
 
@@ -144,9 +155,9 @@ model RecipeTag {
 }
 
 model Ingredient {
-  id           String   @id @default(cuid())
-  name         String   // normalized name
-  category     String?  // Vegetables | Dairy | Meat | Pantry | Frozen
+  id            String  @id @default(cuid())
+  name          String // normalized name
+  category      String? // Vegetables | Dairy | Meat | Pantry | Frozen
   canonicalName String? // for merging duplicates
 
   recipeIngredients RecipeIngredient[]
@@ -154,12 +165,12 @@ model Ingredient {
 }
 
 model RecipeIngredient {
-  id           String   @id @default(cuid())
-  recipeId     String
-  ingredientId String
-  quantity     String
-  unit         String?
-  rawLine      String?  @db.Text
+  id                    String  @id @default(cuid())
+  recipeId              String
+  ingredientId          String
+  quantity              String
+  unit                  String?
+  rawLine               String? @db.Text
   translatedDisplayName String? @db.Text // JSON: { "uk": "...", "en": "...", "he": "..." }
 
   recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -179,20 +190,20 @@ model MealPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   mealPlanRecipes MealPlanRecipe[]
-  shoppingList   ShoppingList?
+  shoppingList    ShoppingList?
 }
 
 model MealPlanRecipe {
-  id          String   @id @default(cuid())
-  mealPlanId  String
-  recipeId    String
-  dayOfWeek   Int      // 0-6 (Mon-Sun)
-  mealSlot    String   // breakfast | lunch | dinner | dessert
+  id         String @id @default(cuid())
+  mealPlanId String
+  recipeId   String
+  dayOfWeek  Int // 0-6 (Mon-Sun)
+  mealSlot   String // breakfast | lunch | dinner | dessert
 
   mealPlan MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
-  recipe  Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@unique([mealPlanId, dayOfWeek, mealSlot])
   @@index([mealPlanId])
@@ -200,38 +211,38 @@ model MealPlanRecipe {
 
 // --- Shopping List ---
 model ShoppingList {
-  id          String   @id @default(cuid())
-  userId      String
-  mealPlanId  String?  @unique
-  name        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  mealPlanId String?  @unique
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mealPlan    MealPlan?           @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
-  items       ShoppingListItem[]
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan?          @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+  items    ShoppingListItem[]
 }
 
 enum ShoppingItemStatus {
-  PENDING   // not yet run by agent
-  FOUND     // successfully added to cart
+  PENDING // not yet run by agent
+  FOUND // successfully added to cart
   NOT_FOUND // no suitable product found after search + alternatives + category
   UNCERTAIN // ambiguous match (e.g. similar product found)
 }
 
 model ShoppingListItem {
-  id                 String   @id @default(cuid())
-  shoppingListId     String
-  ingredientId       String
-  quantity           String
-  unit               String?
-  mergedQuantity     String?
-  checked            Boolean  @default(false)
+  id                     String             @id @default(cuid())
+  shoppingListId         String
+  ingredientId           String
+  quantity               String
+  unit                   String?
+  mergedQuantity         String?
+  checked                Boolean            @default(false)
   status                 ShoppingItemStatus @default(PENDING)
-  matchedProductName     String?  // product name added or best match
-  storeName              String?  // store where agent ran
-  retryCount             Int      @default(0)
-  alternativeSearchQuery String?  // user substitute / manual search term for retry
+  matchedProductName     String? // product name added or best match
+  storeName              String? // store where agent ran
+  retryCount             Int                @default(0)
+  alternativeSearchQuery String? // user substitute / manual search term for retry
 
   shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
   ingredient   Ingredient   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
@@ -242,15 +253,15 @@ model ShoppingListItem {
 
 // --- Pantry (home inventory) ---
 model PantryItem {
-  id                    String    @id @default(cuid())
-  userId                String
-  ingredientName        String    // display name as entered
+  id                       String    @id @default(cuid())
+  userId                   String
+  ingredientName           String // display name as entered
   normalizedIngredientName String // for matching: tomato/tomatoes → same
-  quantity              String   // e.g. "6", "500", "1"
-  unit                  String?  // g, ml, L, kg, etc.
-  expirationDate        DateTime? // optional
-  lastUpdated           DateTime @updatedAt
-  createdAt             DateTime @default(now())
+  quantity                 String // e.g. "6", "500", "1"
+  unit                     String? // g, ml, L, kg, etc.
+  expirationDate           DateTime? // optional
+  lastUpdated              DateTime  @updatedAt
+  createdAt                DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -260,14 +271,14 @@ model PantryItem {
 
 // --- Store Connections (encrypted session storage) ---
 model StoreConnection {
-  id        String   @id @default(cuid())
-  userId    String
-  storeKey  String   // walmart | instacart | tesco | etc.
-  encryptedSessionData String @db.Text // encrypted cookies/tokens, never plain password
-  displayName String?
-  lastUsedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  userId               String
+  storeKey             String // walmart | instacart | tesco | etc.
+  encryptedSessionData String    @db.Text // encrypted cookies/tokens, never plain password
+  displayName          String?
+  lastUsedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

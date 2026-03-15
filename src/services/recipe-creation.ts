@@ -32,7 +32,8 @@ export interface CreateRecipeFromStructuredInput {
   ingredients: StructuredIngredientInput[];
   instructions?: string[];
   originalLanguage?: string | null;
-  category?: RecipeCategory;
+  /** Multiple categories; if empty or omitted, defaults to [OTHER]. */
+  categories?: RecipeCategory[];
   sourceUrl?: string | null;
   sourceType?: string | null;
   tags?: string[];
@@ -57,7 +58,7 @@ export async function createRecipeFromStructured(
     ingredients: ingList,
     instructions = [],
     originalLanguage: providedLang,
-    category = "OTHER",
+    categories: categoriesInput,
     sourceUrl,
     sourceType,
     tags,
@@ -67,6 +68,11 @@ export async function createRecipeFromStructured(
     servings,
     needsReview = false,
   } = input;
+
+  const categories =
+    Array.isArray(categoriesInput) && categoriesInput.length > 0
+      ? [...new Set(categoriesInput)]
+      : [RecipeCategory.OTHER];
 
   let origLang = providedLang;
   if (!origLang || !SOURCE_LANGS.includes(origLang as (typeof SOURCE_LANGS)[number])) {
@@ -85,13 +91,17 @@ export async function createRecipeFromStructured(
       originalLanguage: origLang,
       sourceUrl: sourceUrl ?? null,
       sourceType: sourceType ?? null,
-      category,
       isBuiltIn: false,
       prepTimeMinutes: prepTimeMinutes ?? null,
       cookTimeMinutes: cookTimeMinutes ?? null,
       servings: servings ?? null,
       needsReview,
     },
+  });
+
+  await prisma.recipeCategoryAssignment.createMany({
+    data: categories.map((category) => ({ recipeId: recipe.id, category })),
+    skipDuplicates: true,
   });
 
   const instructionsJson = instructions.length > 0 ? JSON.stringify(instructions) : null;
@@ -177,6 +187,7 @@ export async function createRecipeFromStructured(
   return prisma.recipe.findUnique({
     where: { id: recipe.id },
     include: {
+      recipeCategories: true,
       recipeIngredients: { include: { ingredient: true } },
       tags: true,
       recipeTranslations: true,

@@ -15,17 +15,18 @@ export async function GET(req: NextRequest) {
     const localeParam = searchParams.get("locale");
     const userId = session?.user ? (session.user as { id?: string }).id : null;
 
-    const where: { userId?: string | null; category?: RecipeCategory } = {};
+    const where: { userId?: string | null; recipeCategories?: { some: { category: RecipeCategory } } } = {};
     if (userId) {
       where.userId = userId;
     } else {
       return NextResponse.json([]);
     }
-    if (category) where.category = category;
+    if (category) where.recipeCategories = { some: { category } };
 
     const recipes = await prisma.recipe.findMany({
       where,
       include: {
+        recipeCategories: true,
         recipeIngredients: { include: { ingredient: true } },
         tags: true,
         recipeTranslations: true,
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
       const displayTitle = trans?.title ?? r.title;
       const displayDescription = trans?.description ?? r.description;
       const displayInstructions = trans?.instructions ?? null;
+      const categories = (r.recipeCategories ?? []).map((rc) => rc.category);
       const ingredients = r.recipeIngredients.map((ri) => {
         let displayName = ri.ingredient.name;
         try {
@@ -58,6 +60,8 @@ export async function GET(req: NextRequest) {
       return {
         ...r,
         recipeTranslations: undefined,
+        recipeCategories: undefined,
+        categories,
         displayTitle,
         displayDescription,
         displayInstructions,
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     const {
       title,
       description,
-      category,
+      categories: categoriesBody,
       sourceUrl,
       sourceType,
       ingredients,
@@ -88,6 +92,13 @@ export async function POST(req: NextRequest) {
       tags,
     } = body;
     if (!title) return NextResponse.json({ error: "Missing title" }, { status: 400 });
+
+    const categories =
+      Array.isArray(categoriesBody) && categoriesBody.length > 0
+        ? [...new Set(categoriesBody)].filter((c): c is RecipeCategory =>
+            ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"].includes(c)
+          )
+        : [RecipeCategory.OTHER];
 
     const instructionsArr = Array.isArray(instructions) ? instructions : [];
     const ingList = Array.isArray(ingredients)
@@ -108,7 +119,7 @@ export async function POST(req: NextRequest) {
       ingredients: ingList,
       instructions: instructionsArr,
       originalLanguage: originalLanguage ?? null,
-      category: (category as RecipeCategory) ?? "OTHER",
+      categories,
       sourceUrl: sourceUrl ?? null,
       sourceType: sourceType ?? null,
       tags: Array.isArray(tags) ? tags : undefined,
@@ -117,12 +128,15 @@ export async function POST(req: NextRequest) {
     if (!full) return NextResponse.json({ error: "Create failed" }, { status: 500 });
     const userLocale = await getUserLocale(userId);
     const trans = full.recipeTranslations.find((t) => t.language === userLocale);
+    const categories = (full?.recipeCategories ?? []).map((rc) => rc.category);
     const out = {
       ...full,
-      displayTitle: trans?.title ?? full.title,
-      displayDescription: trans?.description ?? full.description,
+      recipeCategories: undefined,
+      categories,
+      displayTitle: trans?.title ?? full?.title,
+      displayDescription: trans?.description ?? full?.description,
       displayInstructions: trans?.instructions ?? null,
-      recipeIngredients: full.recipeIngredients.map((ri) => {
+      recipeIngredients: full?.recipeIngredients.map((ri) => {
         let displayName = ri.ingredient.name;
         try {
           if (ri.translatedDisplayName) {
@@ -131,7 +145,7 @@ export async function POST(req: NextRequest) {
           }
         } catch {}
         return { ...ri, displayName };
-      }),
+      }) ?? [],
     };
     return NextResponse.json(out);
   } catch (e) {

@@ -61,9 +61,11 @@ async function main() {
         data: {
           title: r.title,
           description: r.description,
-          category: r.category,
           isBuiltIn: true,
         },
+      });
+      await prisma.recipeCategoryAssignment.create({
+        data: { recipeId: rec.id, category: r.category },
       });
     }
 
