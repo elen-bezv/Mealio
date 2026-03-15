@@ -128,11 +128,11 @@ export async function POST(req: NextRequest) {
     if (!full) return NextResponse.json({ error: "Create failed" }, { status: 500 });
     const userLocale = await getUserLocale(userId);
     const trans = full.recipeTranslations.find((t) => t.language === userLocale);
-    const categories = (full?.recipeCategories ?? []).map((rc) => rc.category);
+    const recipeCategoryValues = (full?.recipeCategories ?? []).map((rc) => rc.category);
     const out = {
       ...full,
       recipeCategories: undefined,
-      categories,
+      categories: recipeCategoryValues,
       displayTitle: trans?.title ?? full?.title,
       displayDescription: trans?.description ?? full?.description,
       displayInstructions: trans?.instructions ?? null,

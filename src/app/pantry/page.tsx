@@ -158,9 +158,9 @@ export default function PantryPage() {
   };
 
   const selectAll = () => {
-    const items = items as PantryItem[];
-    if (selectedIds.size === items.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(items.map((i) => i.id)));
+    const list = items as PantryItem[];
+    if (selectedIds.size === list.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(list.map((i) => i.id)));
   };
 
   const openEdit = (item: PantryItem) => {

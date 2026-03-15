@@ -121,7 +121,7 @@ export default function RecipeDetailPage() {
     if (recipe) {
       setEditTitle(recipe.displayTitle);
       setEditDescription(recipe.displayDescription ?? "");
-      const raw = recipe.categories ?? ((recipe as { category?: string }).category ? [(recipe as { category: string }).category] : []);
+      const raw = recipe.categories ?? ((recipe as unknown as { category?: string }).category ? [(recipe as unknown as { category: string }).category] : []);
       const cats = raw.filter((c): c is RecipeCategory => RECIPE_CATEGORIES.includes(c as RecipeCategory));
       setEditCategories(cats.length ? cats : ["OTHER"]);
       setEditIngredients(
