@@ -19,7 +19,7 @@ export interface PantryItemInput {
 }
 
 /**
- * Convert pantry quantity to same normalized form (g or ml) for comparison.
+ * Convert pantry quantity to normalized form (g, ml, or count) for comparison.
  */
 function pantryToNormalized(
   quantity: string,
@@ -73,7 +73,8 @@ export function subtractPantryFromMerged(
 
     for (const p of pantryList) {
       const haveNorm = pantryToNormalized(p.quantity, p.unit ?? undefined, p.ingredientName);
-      if (haveNorm.preferredUnit !== needNorm.preferredUnit) continue;
+      if (needNorm.unitType !== haveNorm.unitType) continue;
+      if (needNorm.unitType === "count" && needNorm.preferredUnit !== haveNorm.preferredUnit) continue;
       needValue = Math.max(0, needValue - haveNorm.value);
       if (needValue <= 0) break;
     }
@@ -89,7 +90,8 @@ export function subtractPantryFromMerged(
     adjusted.push({
       ...item,
       quantity: needValue.toString(),
-      mergedQuantity: formatQuantity(needValue, needNorm.preferredUnit),
+      unit: needNorm.preferredUnit,
+      mergedQuantity: formatQuantity(needValue, needNorm.preferredUnit, needNorm.unitType),
     });
   }
 

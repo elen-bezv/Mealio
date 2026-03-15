@@ -136,14 +136,16 @@ export async function runShoppingAgent(
 
     const normalized = toPreferredUnit(item.quantity, item.unit, item.name);
     const addQty =
-      bestSelection?.addQuantity ??
-      (bestSelection?.product
-        ? suggestQuantityOptimization(
-            bestSelection.product,
-            normalized.value,
-            normalized.preferredUnit === "g"
-          ).quantity
-        : 1);
+      normalized.unitType === "count"
+        ? Math.max(1, Math.round(normalized.value))
+        : bestSelection?.addQuantity ??
+          (bestSelection?.product
+            ? suggestQuantityOptimization(
+                bestSelection.product,
+                normalized.value,
+                normalized.preferredUnit === "g"
+              ).quantity
+            : 1);
 
     const resultEntry: ItemResult = {
       itemId: item.id,

@@ -1,10 +1,13 @@
 /**
- * Unit conversion: volume & weight, density-based for common ingredients.
- * Standard output: solids → grams (g), liquids → milliliters (ml).
+ * Unit conversion: volume, weight, and count-based units.
+ * Weight → g/kg; volume → ml/L; count → preserve pieces, cloves, bulbs, ribs, etc.
+ * Do not force count-based ingredients into grams.
  */
 
 export type VolumeUnit = "cup" | "cups" | "tbsp" | "tsp" | "ml" | "l" | "fl oz" | "liter" | "litre";
 export type WeightUnit = "g" | "kg" | "oz" | "lb" | "gram" | "grams" | "kilogram" | "ounce" | "ounces" | "pound" | "pounds";
+
+export type UnitType = "weight" | "volume" | "count" | "unknown";
 
 const VOLUME_TO_ML: Record<string, number> = {
   cup: 236.588,
@@ -43,6 +46,75 @@ const WEIGHT_TO_G: Record<string, number> = {
   pound: 453.592,
   pounds: 453.592,
 };
+
+/** Count units: raw form → normalized display form (for merging and display). */
+const COUNT_UNIT_NORMALIZE: Record<string, string> = {
+  piece: "pcs",
+  pieces: "pcs",
+  pc: "pcs",
+  pcs: "pcs",
+  clove: "cloves",
+  cloves: "cloves",
+  bulb: "bulbs",
+  bulbs: "bulbs",
+  rib: "ribs",
+  ribs: "ribs",
+  stalk: "stalks",
+  stalks: "stalks",
+  stem: "stalks",
+  stems: "stalks",
+  bunch: "bunch",
+  bunches: "bunch",
+  head: "head",
+  heads: "head",
+  leaf: "leaves",
+  leaves: "leaves",
+  can: "can",
+  cans: "can",
+  jar: "jar",
+  jars: "jar",
+  package: "package",
+  packages: "package",
+  pack: "package",
+  packs: "package",
+  bottle: "bottle",
+  bottles: "bottle",
+  egg: "pcs",
+  eggs: "pcs",
+};
+
+/** Ingredients that are count-based by default (no unit or ambiguous). Key = normalized name pattern. */
+const COUNT_DEFAULT_INGREDIENTS: { pattern: RegExp; unit: string }[] = [
+  { pattern: /^apple(s)?$|^green apple|^red apple/i, unit: "pcs" },
+  { pattern: /^garlic(\s+clove)?s?$/i, unit: "cloves" },
+  { pattern: /^fennel(\s+bulb)?s?$/i, unit: "bulbs" },
+  { pattern: /^celery(\s+(rib|stalk))?s?$/i, unit: "ribs" },
+  { pattern: /^green onion(s)?$|^scallion(s)?$/i, unit: "stalks" },
+  { pattern: /^onion(s)?$/i, unit: "pcs" },
+  { pattern: /^lemon(s)?$/i, unit: "pcs" },
+  { pattern: /^lime(s)?$/i, unit: "pcs" },
+  { pattern: /^egg(s)?$/i, unit: "pcs" },
+  { pattern: /^cucumber(s)?$/i, unit: "pcs" },
+  { pattern: /^carrot(s)?$/i, unit: "pcs" },
+  { pattern: /^mango(es)?$/i, unit: "pcs" },
+  { pattern: /^avocado(s)?$/i, unit: "pcs" },
+  { pattern: /^cabbage(\s+head)?s?$/i, unit: "head" },
+  { pattern: /^parsley$|^cilantro$|^dill$|^mint$/i, unit: "bunch" },
+  { pattern: /^tomato(es)?$/i, unit: "pcs" },
+  { pattern: /^potato(es)?$/i, unit: "pcs" },
+  { pattern: /^bell pepper(s)?$/i, unit: "pcs" },
+  { pattern: /^banana(s)?$/i, unit: "pcs" },
+  { pattern: /^orange(s)?$/i, unit: "pcs" },
+  { pattern: /^pear(s)?$/i, unit: "pcs" },
+  { pattern: /^zucchini$/i, unit: "pcs" },
+  { pattern: /^sweet potato(es)?$/i, unit: "pcs" },
+];
+
+/** Ingredients that are volume-based by default (no unit). */
+const VOLUME_DEFAULT_PATTERNS = /\b(oil|milk|cream|water|broth|stock|juice|vinegar|sauce|honey|syrup|molasses)\b/i;
+
+/** Ingredients that are weight-based by default (no unit). */
+const WEIGHT_DEFAULT_PATTERNS = /\b(flour|sugar|tahini|salt|pepper|spice|herb|powder|cocoa)\b/i;
 
 /** Density g/ml for common ingredients (approximate). */
 export const DENSITY_G_PER_ML: Record<string, number> = {
@@ -96,6 +168,7 @@ function normalizeUnit(unit: string | undefined): string | undefined {
   const u = unit.toLowerCase().trim().replace(/\./g, "");
   if (VOLUME_TO_ML[u] !== undefined) return u;
   if (WEIGHT_TO_G[u] !== undefined) return u;
+  if (COUNT_UNIT_NORMALIZE[u] !== undefined) return u;
   if (u === "c" || u === "cup") return "cup";
   if (u === "t" || u === "tb" || u === "tbs") return "tbsp";
   if (u === "teaspoon") return "tsp";
@@ -106,6 +179,37 @@ function normalizeUnit(unit: string | undefined): string | undefined {
   if (u === "ounce") return "oz";
   if (u === "pound") return "lb";
   return u;
+}
+
+function getCountUnitForIngredient(name: string): string | null {
+  const n = name.toLowerCase().trim().replace(/\s+/g, " ");
+  for (const { pattern, unit } of COUNT_DEFAULT_INGREDIENTS) {
+    if (pattern.test(n)) return unit;
+  }
+  return null;
+}
+
+/**
+ * Classify unit (and optional ingredient) into weight, volume, count, or unknown.
+ */
+export function getUnitType(
+  unit: string | undefined,
+  ingredientName?: string,
+  category?: string
+): UnitType {
+  const u = normalizeUnit(unit);
+  if (VOLUME_TO_ML[u as string] !== undefined) return "volume";
+  if (WEIGHT_TO_G[u as string] !== undefined) return "weight";
+  if (COUNT_UNIT_NORMALIZE[u as string] !== undefined) return "count";
+
+  if (!u || u === "") {
+    if (ingredientName && getCountUnitForIngredient(ingredientName)) return "count";
+    if (ingredientName && VOLUME_DEFAULT_PATTERNS.test(ingredientName)) return "volume";
+    if (ingredientName && isLiquid(ingredientName, category)) return "volume";
+    if (ingredientName && WEIGHT_DEFAULT_PATTERNS.test(ingredientName)) return "weight";
+    return "unknown";
+  }
+  return "unknown";
 }
 
 export function parseQuantity(value: string | number): number {
@@ -121,15 +225,18 @@ export function parseQuantity(value: string | number): number {
   return num;
 }
 
+export type PreferredUnit = "g" | "ml" | string; // string = count unit e.g. "pcs", "cloves"
+
 export interface NormalizedQuantity {
   value: number;
-  unit: "g" | "ml";
-  preferredUnit: "g" | "ml";
+  unit: PreferredUnit;
+  preferredUnit: PreferredUnit;
+  unitType: UnitType;
 }
 
 /**
- * Convert quantity + unit to preferred standard: solids → g, liquids → ml.
- * Uses density when converting volume ↔ weight for known ingredients.
+ * Convert quantity + unit to preferred form: weight → g, volume → ml, count → preserve (pcs, cloves, bulbs, etc.).
+ * Does not force count-based ingredients into grams.
  */
 export function toPreferredUnit(
   quantity: string | number,
@@ -140,9 +247,21 @@ export function toPreferredUnit(
   const q = parseQuantity(quantity);
   const u = normalizeUnit(unit);
 
+  // Known count unit: preserve it
+  const countNorm = u ? COUNT_UNIT_NORMALIZE[u] : undefined;
+  if (countNorm) {
+    return { value: q, unit: countNorm, preferredUnit: countNorm, unitType: "count" };
+  }
+
+  // No unit: use ingredient heuristics
   if (!u) {
+    const countUnit = ingredientName ? getCountUnitForIngredient(ingredientName) : null;
+    if (countUnit) {
+      return { value: q, unit: countUnit, preferredUnit: countUnit, unitType: "count" };
+    }
     const liquid = ingredientName ? isLiquid(ingredientName, category) : false;
-    return { value: q, unit: liquid ? "ml" : "g", preferredUnit: liquid ? "ml" : "g" };
+    const pref = liquid ? "ml" : "g";
+    return { value: q, unit: pref, preferredUnit: pref, unitType: liquid ? "volume" : "weight" };
   }
 
   const volMl = VOLUME_TO_ML[u];
@@ -152,27 +271,54 @@ export function toPreferredUnit(
     const ml = q * volMl;
     const liquid = ingredientName ? isLiquid(ingredientName, category) : true;
     if (liquid) {
-      return { value: Math.round(ml * 10) / 10, unit: "ml", preferredUnit: "ml" };
+      return { value: Math.round(ml * 10) / 10, unit: "ml", preferredUnit: "ml", unitType: "volume" };
     }
     const key = ingredientName?.toLowerCase().trim().replace(/\s+/g, " ");
     const density = key && DENSITY_G_PER_ML[key] ? DENSITY_G_PER_ML[key] : 0.6;
     const grams = ml * density;
-    return { value: Math.round(grams * 10) / 10, unit: "g", preferredUnit: "g" };
+    return { value: Math.round(grams * 10) / 10, unit: "g", preferredUnit: "g", unitType: "weight" };
   }
 
   if (weightG !== undefined) {
     const g = q * weightG;
-    return { value: Math.round(g * 10) / 10, unit: "g", preferredUnit: "g" };
+    return { value: Math.round(g * 10) / 10, unit: "g", preferredUnit: "g", unitType: "weight" };
   }
 
+  // Unknown unit: do not force to g/ml; use ingredient default
+  const countUnit = ingredientName ? getCountUnitForIngredient(ingredientName) : null;
+  if (countUnit) {
+    return { value: q, unit: countUnit, preferredUnit: countUnit, unitType: "count" };
+  }
   const liquid = ingredientName ? isLiquid(ingredientName, category) : false;
-  return { value: q, unit: liquid ? "ml" : "g", preferredUnit: liquid ? "ml" : "g" };
+  const pref = liquid ? "ml" : "g";
+  return { value: q, unit: pref, preferredUnit: pref, unitType: liquid ? "volume" : "weight" };
 }
 
 /**
- * Format a normalized quantity for display (e.g. "500 g", "1.5 L").
+ * Format a normalized quantity for display (e.g. "500 g", "1.5 L", "2 pcs", "4 cloves").
  */
-export function formatQuantity(value: number, preferredUnit: "g" | "ml"): string {
+/** Singular form for count units when value is 1 (e.g. "1 bulb" not "1 bulbs"). */
+const COUNT_UNIT_SINGULAR: Record<string, string> = {
+  pcs: "pc",
+  cloves: "clove",
+  bulbs: "bulb",
+  ribs: "rib",
+  stalks: "stalk",
+  bunch: "bunch",
+  head: "head",
+  leaves: "leaf",
+  can: "can",
+  jar: "jar",
+  package: "package",
+  bottle: "bottle",
+};
+
+export function formatQuantity(value: number, preferredUnit: PreferredUnit, _unitType?: UnitType): string {
+  if (preferredUnit !== "g" && preferredUnit !== "ml") {
+    const v = value % 1 === 0 ? value : Math.round(value * 10) / 10;
+    const unit = value === 1 && COUNT_UNIT_SINGULAR[preferredUnit] ? COUNT_UNIT_SINGULAR[preferredUnit] : preferredUnit;
+    return `${v} ${unit}`;
+  }
   if (preferredUnit === "ml" && value >= 1000) {
     const L = value / 1000;
     return L % 1 === 0 ? `${L} L` : `${L.toFixed(1)} L`;
@@ -186,13 +332,29 @@ export function formatQuantity(value: number, preferredUnit: "g" | "ml"): string
 }
 
 /**
- * Add two quantities that are already in the same preferred unit.
+ * Check if two normalized quantities can be merged (same unit type and same preferred unit for count).
+ */
+export function canMergeQuantities(a: NormalizedQuantity, b: NormalizedQuantity): boolean {
+  if (a.unitType !== b.unitType) return false;
+  if (a.unitType === "count" && a.preferredUnit !== b.preferredUnit) return false;
+  if (a.unitType === "unknown" || b.unitType === "unknown") return false;
+  return true;
+}
+
+/**
+ * Add two quantities that are compatible (same unit type and same preferred unit).
  */
 export function addQuantities(
   value1: number,
   value2: number,
-  preferredUnit: "g" | "ml"
+  preferredUnit: PreferredUnit,
+  unitType?: UnitType
 ): { value: number; formatted: string } {
-  const value = Math.round((value1 + value2) * 10) / 10;
-  return { value, formatted: formatQuantity(value, preferredUnit) };
+  const value = preferredUnit === "g" || preferredUnit === "ml"
+    ? Math.round((value1 + value2) * 10) / 10
+    : Math.round(value1 + value2);
+  return {
+    value,
+    formatted: formatQuantity(value, preferredUnit, unitType),
+  };
 }

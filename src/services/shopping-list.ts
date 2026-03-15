@@ -6,6 +6,7 @@ import {
   toPreferredUnit,
   addQuantities,
   formatQuantity,
+  canMergeQuantities,
   type NormalizedQuantity,
 } from "@/lib/unit-conversion";
 import { applyPantryToMerged } from "@/services/pantry-matching";
@@ -19,12 +20,22 @@ export interface ItemForMerge {
 }
 
 /**
- * Smart merge: normalize names (dictionary + fuzzy), convert to preferred units (g/ml), then sum.
- * Example: Recipe1 "Tomatoes – 3" + Recipe2 "Tomatoes – 2" → "Tomatoes – 5"
- *          "1 cup sugar" + "200 g sugar" → "Sugar – 400 g" (after conversion).
+ * Merge key: canonical name + unit type + (for count) preferred unit. Incompatible units stay separate.
+ */
+function mergeKey(canonicalName: string, norm: NormalizedQuantity): string {
+  const base = getCanonicalKey(canonicalName);
+  if (norm.unitType === "count") return `${base}::count::${norm.preferredUnit}`;
+  if (norm.unitType === "volume") return `${base}::volume`;
+  if (norm.unitType === "weight") return `${base}::weight`;
+  return `${base}::${norm.preferredUnit}`;
+}
+
+/**
+ * Smart merge: normalize names, convert to preferred units (g/ml/count), merge only compatible units.
+ * Count-based ingredients stay in count units (pcs, cloves, bulbs, etc.).
  */
 export function mergeIngredients(items: ItemForMerge[]): MergedShoppingItem[] {
-  const byCanonical = new Map<
+  const byKey = new Map<
     string,
     {
       canonicalName: string;
@@ -36,31 +47,54 @@ export function mergeIngredients(items: ItemForMerge[]): MergedShoppingItem[] {
 
   for (const item of items) {
     const canonicalName = normalizeIngredientName(item.name);
-    const key = getCanonicalKey(canonicalName);
     const normalized = toPreferredUnit(
       item.quantity,
       item.unit,
       item.name,
       item.category
     );
+    const key = mergeKey(canonicalName, normalized);
 
-    const existing = byCanonical.get(key);
+    const existing = byKey.get(key);
     if (existing) {
+      if (!canMergeQuantities(existing.total, normalized)) {
+        const keyOther = mergeKey(canonicalName, normalized);
+        const existingOther = byKey.get(keyOther);
+        if (existingOther && canMergeQuantities(existingOther.total, normalized)) {
+          const added = addQuantities(
+            existingOther.total.value,
+            normalized.value,
+            normalized.preferredUnit,
+            normalized.unitType
+          );
+          existingOther.total = { ...existingOther.total, value: added.value };
+          if (item.ingredientId) existingOther.ingredientIds.push(item.ingredientId);
+        } else {
+          byKey.set(keyOther, {
+            canonicalName,
+            total: { value: normalized.value, unit: normalized.unit, preferredUnit: normalized.preferredUnit, unitType: normalized.unitType },
+            category: item.category,
+            ingredientIds: item.ingredientId ? [item.ingredientId] : [],
+          });
+        }
+        continue;
+      }
       const added = addQuantities(
         existing.total.value,
         normalized.value,
-        normalized.preferredUnit
+        normalized.preferredUnit,
+        normalized.unitType
       );
       existing.total = { ...existing.total, value: added.value };
-      existing.total.preferredUnit = normalized.preferredUnit;
       if (item.ingredientId) existing.ingredientIds.push(item.ingredientId);
     } else {
-      byCanonical.set(key, {
+      byKey.set(key, {
         canonicalName,
         total: {
           value: normalized.value,
           unit: normalized.unit,
           preferredUnit: normalized.preferredUnit,
+          unitType: normalized.unitType,
         },
         category: item.category,
         ingredientIds: item.ingredientId ? [item.ingredientId] : [],
@@ -68,11 +102,11 @@ export function mergeIngredients(items: ItemForMerge[]): MergedShoppingItem[] {
     }
   }
 
-  return Array.from(byCanonical.values()).map((x) => ({
+  return Array.from(byKey.values()).map((x) => ({
     name: x.canonicalName,
     quantity: x.total.value.toString(),
-    unit: x.total.preferredUnit === "ml" ? "ml" : "g",
-    mergedQuantity: formatQuantity(x.total.value, x.total.preferredUnit),
+    unit: x.total.preferredUnit,
+    mergedQuantity: formatQuantity(x.total.value, x.total.preferredUnit, x.total.unitType),
     category: x.category,
     ingredientIds: x.ingredientIds,
   }));
