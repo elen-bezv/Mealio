@@ -84,6 +84,14 @@ export interface MergedShoppingItem {
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "dessert";
 
+/** Display labels for meal slots. Order: Breakfast, Lunch, Dinner, Dessert / Snack */
+export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  dessert: "Dessert / Snack",
+};
+
 export const MEAL_SLOTS: MealSlot[] = [
   "breakfast",
   "lunch",

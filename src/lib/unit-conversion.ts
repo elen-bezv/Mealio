@@ -81,6 +81,10 @@ const COUNT_UNIT_NORMALIZE: Record<string, string> = {
   bottles: "bottle",
   egg: "pcs",
   eggs: "pcs",
+  cabbage: "head",
+  cabbages: "head",
+  onion: "onion",
+  onions: "onion",
 };
 
 /** Ingredients that are count-based by default (no unit or ambiguous). Key = normalized name pattern. */
@@ -90,15 +94,15 @@ const COUNT_DEFAULT_INGREDIENTS: { pattern: RegExp; unit: string }[] = [
   { pattern: /^fennel(\s+bulb)?s?$/i, unit: "bulbs" },
   { pattern: /^celery(\s+(rib|stalk))?s?$/i, unit: "ribs" },
   { pattern: /^green onion(s)?$|^scallion(s)?$/i, unit: "stalks" },
-  { pattern: /^onion(s)?$/i, unit: "pcs" },
+  { pattern: /^(red\s+|yellow\s+|white\s+)?onion(s)?$/i, unit: "onion" },
   { pattern: /^lemon(s)?$/i, unit: "pcs" },
   { pattern: /^lime(s)?$/i, unit: "pcs" },
   { pattern: /^egg(s)?$/i, unit: "pcs" },
-  { pattern: /^cucumber(s)?$/i, unit: "pcs" },
+  { pattern: /^(seedless\s+)?cucumber(s)?$/i, unit: "pcs" },
   { pattern: /^carrot(s)?$/i, unit: "pcs" },
   { pattern: /^mango(es)?$/i, unit: "pcs" },
   { pattern: /^avocado(s)?$/i, unit: "pcs" },
-  { pattern: /^cabbage(\s+head)?s?$/i, unit: "head" },
+  { pattern: /^(green\s+)?(red\s+)?cabbage(\s+head)?s?$/i, unit: "head" },
   { pattern: /^parsley$|^cilantro$|^dill$|^mint$/i, unit: "bunch" },
   { pattern: /^tomato(es)?$/i, unit: "pcs" },
   { pattern: /^potato(es)?$/i, unit: "pcs" },
@@ -114,7 +118,7 @@ const COUNT_DEFAULT_INGREDIENTS: { pattern: RegExp; unit: string }[] = [
 const VOLUME_DEFAULT_PATTERNS = /\b(oil|milk|cream|water|broth|stock|juice|vinegar|sauce|honey|syrup|molasses)\b/i;
 
 /** Ingredients that are weight-based by default (no unit). */
-const WEIGHT_DEFAULT_PATTERNS = /\b(flour|sugar|tahini|salt|pepper|spice|herb|powder|cocoa)\b/i;
+const WEIGHT_DEFAULT_PATTERNS = /\b(flour|sugar|tahini|salt|pepper|spice|herb|powder|cocoa|walnut|walnuts|nut|nuts|seed|seeds)\b/i;
 
 /** Density g/ml for common ingredients (approximate). */
 export const DENSITY_G_PER_ML: Record<string, number> = {
@@ -212,17 +216,31 @@ export function getUnitType(
   return "unknown";
 }
 
+/**
+ * Parse quantity string, including fractions and mixed numbers.
+ * Examples: "2" -> 2, "1/2" -> 0.5, "3/4" -> 0.75, "1 1/2" -> 1.5, "2 1/2" -> 2.5.
+ */
 export function parseQuantity(value: string | number): number {
   if (typeof value === "number" && !Number.isNaN(value)) return value;
   const s = String(value).trim();
   if (!s) return 0;
-  const num = parseFloat(s.replace(/[^\d./-]/g, ""));
-  if (Number.isNaN(num)) return 0;
-  if (s.includes("/")) {
-    const [a, b] = s.split("/").map((x) => parseFloat(x.trim()));
-    if (b && !Number.isNaN(a) && !Number.isNaN(b)) return a / b;
+  // Mixed number: "1 1/2", "2 1/2"
+  const mixedMatch = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixedMatch) {
+    const whole = parseFloat(mixedMatch[1]);
+    const num = parseFloat(mixedMatch[2]);
+    const den = parseFloat(mixedMatch[3]);
+    if (!Number.isNaN(whole) && den && !Number.isNaN(num) && !Number.isNaN(den)) return whole + num / den;
   }
-  return num;
+  // Simple fraction: "1/2", "3/4"
+  if (s.includes("/")) {
+    const parts = s.split("/").map((x) => parseFloat(x.trim()));
+    if (parts.length === 2 && parts[1] && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+      return parts[0] / parts[1];
+    }
+  }
+  const num = parseFloat(s.replace(/[^\d./-]/g, ""));
+  return Number.isNaN(num) ? 0 : num;
 }
 
 export type PreferredUnit = "g" | "ml" | string; // string = count unit e.g. "pcs", "cloves"
@@ -311,13 +329,43 @@ const COUNT_UNIT_SINGULAR: Record<string, string> = {
   jar: "jar",
   package: "package",
   bottle: "bottle",
+  onion: "onion",
 };
+
+/** Plural form for count units when value !== 1 (e.g. "1.5 heads", "2 cloves"). */
+const COUNT_UNIT_PLURAL: Record<string, string> = {
+  pcs: "pcs",
+  cloves: "cloves",
+  bulbs: "bulbs",
+  ribs: "ribs",
+  stalks: "stalks",
+  bunch: "bunches",
+  head: "heads",
+  leaves: "leaves",
+  can: "cans",
+  jar: "jars",
+  package: "packages",
+  bottle: "bottles",
+  onion: "onions",
+};
+
+/** For count units, show common fractions as 1/2, 1/4, 3/4 when value is exact. */
+function formatCountValue(value: number): string {
+  if (value === 0.25) return "1/4";
+  if (value === 0.5) return "1/2";
+  if (value === 0.75) return "3/4";
+  return value % 1 === 0 ? String(value) : String(Math.round(value * 10) / 10);
+}
 
 export function formatQuantity(value: number, preferredUnit: PreferredUnit, _unitType?: UnitType): string {
   if (preferredUnit !== "g" && preferredUnit !== "ml") {
     const v = value % 1 === 0 ? value : Math.round(value * 10) / 10;
-    const unit = value === 1 && COUNT_UNIT_SINGULAR[preferredUnit] ? COUNT_UNIT_SINGULAR[preferredUnit] : preferredUnit;
-    return `${v} ${unit}`;
+    const unit =
+      value === 1 && COUNT_UNIT_SINGULAR[preferredUnit]
+        ? COUNT_UNIT_SINGULAR[preferredUnit]
+        : COUNT_UNIT_PLURAL[preferredUnit] ?? preferredUnit;
+    const valueStr = formatCountValue(v);
+    return `${valueStr} ${unit}`;
   }
   if (preferredUnit === "ml" && value >= 1000) {
     const L = value / 1000;
@@ -343,6 +391,7 @@ export function canMergeQuantities(a: NormalizedQuantity, b: NormalizedQuantity)
 
 /**
  * Add two quantities that are compatible (same unit type and same preferred unit).
+ * Count units preserve one decimal (e.g. 0.5 + 0.5 + 0.5 = 1.5 cabbages).
  */
 export function addQuantities(
   value1: number,
@@ -350,9 +399,8 @@ export function addQuantities(
   preferredUnit: PreferredUnit,
   unitType?: UnitType
 ): { value: number; formatted: string } {
-  const value = preferredUnit === "g" || preferredUnit === "ml"
-    ? Math.round((value1 + value2) * 10) / 10
-    : Math.round(value1 + value2);
+  const sum = value1 + value2;
+  const value = Math.round(sum * 10) / 10;
   return {
     value,
     formatted: formatQuantity(value, preferredUnit, unitType),

@@ -200,7 +200,7 @@ model MealPlanRecipe {
   mealPlanId String
   recipeId   String
   dayOfWeek  Int // 0-6 (Mon-Sun)
-  mealSlot   String // breakfast | lunch | dinner | dessert
+  mealSlot   String // breakfast | lunch | dinner | dessert (display: Dessert / Snack)
 
   mealPlan MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
   recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)

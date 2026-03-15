@@ -13,9 +13,14 @@ describe("parseQuantity", () => {
     expect(parseQuantity("1.5")).toBe(1.5);
     expect(parseQuantity(3)).toBe(3);
   });
-  it("parses fractions", () => {
+  it("parses simple fractions", () => {
     expect(parseQuantity("1/2")).toBe(0.5);
     expect(parseQuantity("1/4")).toBe(0.25);
+    expect(parseQuantity("3/4")).toBe(0.75);
+  });
+  it("parses mixed numbers", () => {
+    expect(parseQuantity("1 1/2")).toBe(1.5);
+    expect(parseQuantity("2 1/2")).toBe(2.5);
   });
 });
 
@@ -116,6 +121,57 @@ describe("toPreferredUnit", () => {
     expect(p.preferredUnit).toBe("bunch");
   });
 
+  it("1/2 green cabbage stays count-based (not grams)", () => {
+    const half = toPreferredUnit("1/2", undefined, "green cabbage");
+    expect(half.unitType).toBe("count");
+    expect(half.preferredUnit).toBe("head");
+    expect(half.value).toBe(0.5);
+  });
+
+  it("red cabbage and cabbage stay count-based", () => {
+    expect(toPreferredUnit(1, undefined, "red cabbage").unitType).toBe("count");
+    expect(toPreferredUnit(0.5, undefined, "cabbage").preferredUnit).toBe("head");
+  });
+
+  it("seedless cucumber stays count-based (not grams)", () => {
+    const c = toPreferredUnit(2, undefined, "seedless cucumbers");
+    expect(c.unitType).toBe("count");
+    expect(c.preferredUnit).toBe("pcs");
+    expect(c.value).toBe(2);
+  });
+
+  it("red onion stays count-based with onion unit", () => {
+    const half = toPreferredUnit("1/2", undefined, "red onion");
+    expect(half.unitType).toBe("count");
+    expect(half.preferredUnit).toBe("onion");
+    expect(half.value).toBe(0.5);
+  });
+
+  it("avocado stays pcs", () => {
+    const a = toPreferredUnit(1, undefined, "avocado");
+    expect(a.unitType).toBe("count");
+    expect(a.preferredUnit).toBe("pcs");
+  });
+
+  it("garlic stays cloves when given cloves", () => {
+    const g = toPreferredUnit(4, "cloves", "garlic");
+    expect(g.unitType).toBe("count");
+    expect(g.preferredUnit).toBe("cloves");
+    expect(g.value).toBe(4);
+  });
+
+  it("fennel bulb stays bulbs", () => {
+    const f = toPreferredUnit(2, undefined, "fennel bulb");
+    expect(f.unitType).toBe("count");
+    expect(f.preferredUnit).toBe("bulbs");
+  });
+
+  it("walnuts default to weight", () => {
+    const w = toPreferredUnit(35, undefined, "walnuts");
+    expect(w.unitType).toBe("weight");
+    expect(w.preferredUnit).toBe("g");
+  });
+
   it("water in ml/L", () => {
     const w = toPreferredUnit(500, "ml", "water");
     expect(w.preferredUnit).toBe("ml");
@@ -172,6 +228,12 @@ describe("addQuantities", () => {
     expect(r.value).toBe(5);
     expect(r.formatted).toBe("5 pcs");
   });
+  it("preserves fractional count (0.5 + 0.5 = 1, 0.5 + 0.5 + 0.5 = 1.5)", () => {
+    expect(addQuantities(0.5, 0.5, "head", "count").value).toBe(1);
+    expect(addQuantities(1, 0.5, "head", "count").value).toBe(1.5);
+    expect(addQuantities(0.5, 0.5, "head", "count").formatted).toBe("1 head");
+    expect(addQuantities(1, 0.5, "head", "count").formatted).toBe("1.5 heads");
+  });
   it("adds weight quantities", () => {
     const r = addQuantities(200, 100, "g", "weight");
     expect(r.value).toBe(300);
@@ -184,10 +246,20 @@ describe("addQuantities", () => {
   });
 });
 
-describe("formatQuantity singular", () => {
+describe("formatQuantity singular and plural", () => {
   it("uses singular for 1 count unit", () => {
     expect(formatQuantity(1, "bulbs")).toBe("1 bulb");
     expect(formatQuantity(1, "cloves")).toBe("1 clove");
     expect(formatQuantity(1, "pcs")).toBe("1 pc");
+    expect(formatQuantity(1, "head")).toBe("1 head");
+  });
+  it("uses plural for non-1 count (e.g. 1.5 heads, 2 cloves)", () => {
+    expect(formatQuantity(1.5, "head")).toBe("1.5 heads");
+    expect(formatQuantity(2, "head")).toBe("2 heads");
+    expect(formatQuantity(6, "cloves")).toBe("6 cloves");
+  });
+  it("formats 0.5 count as 1/2 (e.g. 1/2 onion, 1/2 heads)", () => {
+    expect(formatQuantity(0.5, "onion")).toBe("1/2 onions");
+    expect(formatQuantity(0.5, "head")).toBe("1/2 heads");
   });
 });

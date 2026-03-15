@@ -8,7 +8,7 @@ export default function HomePage() {
   const cards = [
     { href: "/import", title: "Import recipe", desc: "Paste link (blog, Instagram, TikTok), text, or upload photo/PDF. All recipes go to Recipe Library." },
     { href: "/library", title: "Recipe library", desc: "Your recipes by category—imported or created. Browse, edit, add to planner or list." },
-    { href: "/planner", title: "Weekly planner", desc: "Plan breakfast, lunch, dinner for the week." },
+    { href: "/planner", title: "Weekly planner", desc: "Plan Breakfast, Lunch, Dinner, and Dessert / Snack for the week." },
     { href: "/shopping", title: "Shopping list", desc: "Merged ingredients, ready to send to a store." },
     { href: "/pantry", title: "Pantry", desc: "Track what you have at home; lists auto-subtract pantry." },
     { href: "/stores", title: "Stores", desc: "Connect Walmart, Instacart, Tesco; agent fills cart." },
