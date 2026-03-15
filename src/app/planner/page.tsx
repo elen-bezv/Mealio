@@ -67,9 +67,7 @@ export default function PlannerPage() {
     },
   });
 
-  const userRecipes = Array.isArray(recipes) ? recipes.filter((r: { isBuiltIn?: boolean }) => !r.isBuiltIn) : [];
-  const builtIn = Array.isArray(recipes) ? recipes.filter((r: { isBuiltIn?: boolean }) => r.isBuiltIn) : [];
-  const allRecipes = [...userRecipes, ...builtIn];
+  const allRecipes = Array.isArray(recipes) ? recipes : [];
 
   const slotsForSubmit = Object.entries(selected)
     .filter(([, recipeId]) => recipeId)
@@ -92,13 +90,15 @@ export default function PlannerPage() {
           </p>
         </header>
 
-        <div className="flex flex-wrap items-center gap-[var(--spacing-4)]" style={{ marginBottom: "var(--spacing-6)" }}>
-          <Input
-            placeholder="Plan name (optional)"
-            value={planName}
-            onChange={(e) => setPlanName(e.target.value)}
-            className="max-w-xs"
-          />
+        <div className="flex flex-wrap items-center gap-[var(--spacing-4)] planner-name-row" style={{ marginBottom: "var(--spacing-6)" }}>
+          <div className="planner-input-wrap">
+            <Input
+              placeholder="Plan name (optional)"
+              value={planName}
+              onChange={(e) => setPlanName(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
           <Button
             onClick={() =>
               createMutation.mutate({

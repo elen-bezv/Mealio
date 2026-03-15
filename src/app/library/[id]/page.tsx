@@ -5,13 +5,24 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card, Button, Input, Textarea, LoadingFallback } from "@/components/ui";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import type { RecipeCategory } from "@/types";
+
+const RECIPE_CATEGORIES: RecipeCategory[] = ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"];
+const CATEGORY_LABELS: Record<RecipeCategory, string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+  DESSERT: "Dessert",
+  SNACK: "Snack",
+  OTHER: "Other",
+};
 
 type RecipeIngredient = {
   id: string;
   quantity: string;
   unit: string | null;
   displayName: string;
-  ingredient: { name: string };
+  ingredient: { name: string; category?: string | null };
 };
 
 type RecipeDetail = {
@@ -67,6 +78,27 @@ async function deleteRecipe(id: string) {
   if (!r.ok) throw new Error((await r.json()).error ?? "Delete failed");
 }
 
+async function addRecipeIngredientsToShoppingList(
+  name: string,
+  ingredients: RecipeIngredient[]
+): Promise<{ id: string }> {
+  const r = await fetch("/api/shopping-lists", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: name ? `Recipe: ${name}` : "My list",
+      ingredients: ingredients.map((ri) => ({
+        name: ri.displayName,
+        quantity: ri.quantity,
+        unit: ri.unit ?? undefined,
+        category: ri.ingredient?.category ?? undefined,
+      })),
+    }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error ?? "Failed to add to shopping list");
+  return r.json();
+}
+
 export default function RecipeDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -76,6 +108,7 @@ export default function RecipeDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<RecipeCategory>("OTHER");
   const [editIngredients, setEditIngredients] = useState<{ name: string; quantity: string; unit?: string | null }[]>([]);
 
   const { data: recipe, isLoading, error } = useQuery({
@@ -88,6 +121,9 @@ export default function RecipeDetailPage() {
     if (recipe) {
       setEditTitle(recipe.displayTitle);
       setEditDescription(recipe.displayDescription ?? "");
+      setEditCategory(
+        RECIPE_CATEGORIES.includes(recipe.category as RecipeCategory) ? (recipe.category as RecipeCategory) : "OTHER"
+      );
       setEditIngredients(
         recipe.recipeIngredients.map((ri) => ({
           name: ri.displayName,
@@ -116,6 +152,15 @@ export default function RecipeDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
       router.push("/library");
+    },
+  });
+
+  const addToListMutation = useMutation({
+    mutationFn: () =>
+      addRecipeIngredientsToShoppingList(recipe!.displayTitle, recipe!.recipeIngredients),
+    onSuccess: (list) => {
+      queryClient.invalidateQueries({ queryKey: ["shopping-lists"] });
+      router.push(`/shopping?list=${list.id}`);
     },
   });
 
@@ -155,7 +200,7 @@ export default function RecipeDetailPage() {
                     updateMutation.mutate({
                       title: editTitle,
                       description: editDescription || null,
-                      category: recipe.category,
+                      category: editCategory,
                       ingredients: editIngredients,
                     })
                   }
@@ -187,12 +232,27 @@ export default function RecipeDetailPage() {
           {!editMode ? (
             <>
               <h1 className="page-title" style={{ marginBottom: "var(--spacing-2)" }}>{recipe.displayTitle}</h1>
+              <p className="text-[var(--text-body-sm)] text-[var(--text-tertiary)]" style={{ marginBottom: "var(--spacing-4)" }}>
+                {CATEGORY_LABELS[recipe.category as RecipeCategory] ?? recipe.category}
+              </p>
               {recipe.displayDescription && (
                 <p className="text-[var(--text-body)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-6)" }}>
                   {recipe.displayDescription}
                 </p>
               )}
-              <h2 className="section-title" style={{ marginBottom: "var(--spacing-3)" }}>Ingredients</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--spacing-3)", marginBottom: "var(--spacing-3)" }}>
+                <h2 className="section-title" style={{ marginBottom: 0 }}>Ingredients</h2>
+                {recipe.recipeIngredients.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => addToListMutation.mutate()}
+                    disabled={addToListMutation.isPending}
+                  >
+                    {addToListMutation.isPending ? "Adding…" : "Add to shopping list"}
+                  </Button>
+                )}
+              </div>
               <ul className="list-inside list-disc text-[var(--text-body)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-6)" }}>
                 {recipe.recipeIngredients.map((ri) => (
                   <li key={ri.id}>
@@ -216,6 +276,24 @@ export default function RecipeDetailPage() {
               <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>
                 <label className="input-label">Title</label>
                 <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+              </div>
+              <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>
+                <label className="input-label">Category</label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value as RecipeCategory)}
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[var(--text-body)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
+                  style={{ height: "var(--input-height)", fontSize: "var(--text-body-sm)" }}
+                >
+                  {RECIPE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+                <p className="input-helper" style={{ marginTop: "var(--spacing-1)" }}>
+                  Used for filtering in Recipe Library.
+                </p>
               </div>
               <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>
                 <label className="input-label">Description</label>

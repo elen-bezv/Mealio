@@ -5,7 +5,17 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card, Button, Input, Textarea } from "@/components/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import type { ParseRecipeProResult, StructuredRecipe, ParserWarning, StructuredIngredient } from "@/types";
+import type { ParseRecipeProResult, StructuredRecipe, ParserWarning, StructuredIngredient, RecipeCategory } from "@/types";
+
+const RECIPE_CATEGORIES: RecipeCategory[] = ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"];
+const CATEGORY_LABELS: Record<RecipeCategory, string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+  DESSERT: "Dessert",
+  SNACK: "Snack",
+  OTHER: "Other",
+};
 
 type InputMode = "url" | "text" | "file";
 
@@ -49,6 +59,7 @@ async function parseRecipePro(payload: {
 async function saveRecipe(data: {
   title: string;
   description?: string;
+  category: RecipeCategory;
   sourceUrl?: string;
   sourceType?: string;
   ingredients: StructuredIngredient[];
@@ -60,7 +71,7 @@ async function saveRecipe(data: {
     body: JSON.stringify({
       title: data.title,
       description: data.description,
-      category: "OTHER",
+      category: data.category,
       sourceUrl: data.sourceUrl,
       sourceType: data.sourceType,
       instructions: data.instructions,
@@ -83,6 +94,7 @@ async function overwriteRecipe(
   data: {
     title: string;
     description?: string;
+    category?: RecipeCategory;
     ingredients: StructuredIngredient[];
   }
 ) {
@@ -92,6 +104,7 @@ async function overwriteRecipe(
     body: JSON.stringify({
       title: data.title,
       description: data.description,
+      category: data.category,
       ingredients: data.ingredients.map((i) => ({
         name: i.name,
         quantity: i.quantity,
@@ -111,6 +124,7 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ParseRecipeProResult | null>(null);
   const [duplicateAction, setDuplicateAction] = useState<"overwrite" | "copy" | "cancel" | null>(null);
+  const [saveCategory, setSaveCategory] = useState<RecipeCategory>("OTHER");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -118,6 +132,21 @@ export default function ImportPage() {
     mutationFn: parseRecipePro,
     onSuccess: (data) => setPreview(data),
     onError: () => setPreview(null),
+  });
+
+  const pdfImportMutation = useMutation({
+    mutationFn: async ({ file: pdfFile, category }: { file: File; category: RecipeCategory }) => {
+      const form = new FormData();
+      form.set("file", pdfFile);
+      form.set("category", category);
+      const r = await fetch("/api/recipes/import-pdf", { method: "POST", body: form });
+      if (!r.ok) throw new Error((await r.json()).error ?? "Import failed");
+      return r.json() as Promise<{ imported: number; recipeIds: string[] }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      router.push(`/library?imported=${data.imported}`);
+    },
   });
 
   const isFailedImport = preview?.parseStatus === "failed";
@@ -132,7 +161,7 @@ export default function ImportPage() {
   });
 
   const overwriteMutation = useMutation({
-    mutationFn: ({ recipeId, data }: { recipeId: string; data: { title: string; description?: string; ingredients: StructuredIngredient[] } }) =>
+    mutationFn: ({ recipeId, data }: { recipeId: string; data: { title: string; description?: string; category?: RecipeCategory; ingredients: StructuredIngredient[] } }) =>
       overwriteRecipe(recipeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
@@ -156,6 +185,7 @@ export default function ImportPage() {
         data: {
           title: recipe.title,
           description: recipe.description,
+          category: saveCategory,
           ingredients: recipe.ingredients,
         },
       });
@@ -164,6 +194,7 @@ export default function ImportPage() {
     saveMutation.mutate({
       title: recipe.title,
       description: recipe.description,
+      category: saveCategory,
       sourceUrl: recipe.sourceUrl,
       sourceType: recipe.sourceType,
       instructions: recipe.instructions,
@@ -236,7 +267,7 @@ export default function ImportPage() {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="w-full text-[var(--text-secondary)] file:mr-4 file:rounded-[var(--radius-sm)] file:border-0 file:bg-[var(--accent)] file:px-4 file:py-2 file:text-[var(--text-inverse)] file:font-medium"
               />
-              <p className="input-helper">JPG, PNG, WebP, HEIC, or PDF</p>
+              <p className="input-helper">JPG, PNG, WebP, HEIC, or PDF. For PDFs you can extract one recipe or add all recipes to the library.</p>
             </div>
           )}
 
@@ -247,6 +278,29 @@ export default function ImportPage() {
             >
               {parseMutation.isPending ? "Analyzing…" : "Import recipe"}
             </Button>
+            {mode === "file" && file?.type === "application/pdf" && (
+              <>
+                <label className="text-[var(--text-body-sm)] text-[var(--text-secondary)] flex items-center gap-2">
+                  <span>Category for imported recipes:</span>
+                  <select
+                    value={saveCategory}
+                    onChange={(e) => setSaveCategory(e.target.value as RecipeCategory)}
+                    className="rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-input)] px-2 py-1.5 text-[var(--text-primary)]"
+                  >
+                    {RECIPE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  variant="secondary"
+                  onClick={() => pdfImportMutation.mutate({ file, category: saveCategory })}
+                  disabled={pdfImportMutation.isPending}
+                >
+                  {pdfImportMutation.isPending ? "Adding recipes…" : "Add all recipes from PDF to library"}
+                </Button>
+              </>
+            )}
           </div>
 
           {parseMutation.isError && (
@@ -350,6 +404,20 @@ export default function ImportPage() {
                 </ol>
               </div>
             )}
+
+            <div className="input-wrap" style={{ marginBottom: "var(--spacing-6)" }}>
+              <label className="input-label">Category</label>
+              <select
+                value={saveCategory}
+                onChange={(e) => setSaveCategory(e.target.value as RecipeCategory)}
+                className="w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[var(--text-body)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
+                style={{ height: "var(--input-height)", fontSize: "var(--text-body-sm)", maxWidth: "200px" }}
+              >
+                {RECIPE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex flex-wrap gap-[var(--spacing-3)]">
               <Button

@@ -8,9 +8,7 @@ import { useTranslations } from "next-intl";
 const NAV = [
   { href: "/", labelKey: "dashboard" },
   { href: "/import", labelKey: "importRecipe" },
-  { href: "/cookbooks", labelKey: "cookbooks" },
   { href: "/library", labelKey: "recipeLibrary" },
-  { href: "/ready-recipes", labelKey: "readyRecipes" },
   { href: "/planner", labelKey: "weeklyPlanner" },
   { href: "/shopping", labelKey: "shoppingList" },
   { href: "/pantry", labelKey: "pantry" },

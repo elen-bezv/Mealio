@@ -4,7 +4,7 @@ import { type CSSProperties, type ReactNode } from "react";
 
 interface CardProps {
   children: ReactNode;
-  /** Use for clickable cards (e.g. dashboard links) */
+  /** Use for clickable cards (e.g. home page links) */
   interactive?: boolean;
   className?: string;
   style?: CSSProperties;

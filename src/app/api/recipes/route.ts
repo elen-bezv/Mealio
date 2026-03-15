@@ -12,18 +12,14 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category") as RecipeCategory | null;
-    const builtIn = searchParams.get("builtIn");
     const localeParam = searchParams.get("locale");
     const userId = session?.user ? (session.user as { id?: string }).id : null;
 
-    const where: { userId?: string | null; category?: RecipeCategory; isBuiltIn?: boolean } = {};
-    if (builtIn === "true") {
-      where.isBuiltIn = true;
-    } else if (userId) {
+    const where: { userId?: string | null; category?: RecipeCategory } = {};
+    if (userId) {
       where.userId = userId;
     } else {
-      where.userId = null;
-      where.isBuiltIn = true;
+      return NextResponse.json([]);
     }
     if (category) where.category = category;
 

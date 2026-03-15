@@ -4,12 +4,10 @@ import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card } from "@/components/ui";
 
-export default function DashboardPage() {
+export default function HomePage() {
   const cards = [
-    { href: "/import", title: "Import recipe", desc: "Paste link (blog, Instagram, TikTok), text, or upload photo/PDF. AI structures the recipe." },
-    { href: "/cookbooks", title: "Cookbooks", desc: "Upload PDF cookbooks; detect and import multiple recipes at once." },
-    { href: "/library", title: "Recipe library", desc: "Your saved recipes, tagged and categorized." },
-    { href: "/ready-recipes", title: "Ready recipes", desc: "Built-in recipes to add to your plan or list." },
+    { href: "/import", title: "Import recipe", desc: "Paste link (blog, Instagram, TikTok), text, or upload photo/PDF. All recipes go to Recipe Library." },
+    { href: "/library", title: "Recipe library", desc: "Your recipes by category—imported or created. Browse, edit, add to planner or list." },
     { href: "/planner", title: "Weekly planner", desc: "Plan breakfast, lunch, dinner for the week." },
     { href: "/shopping", title: "Shopping list", desc: "Merged ingredients, ready to send to a store." },
     { href: "/pantry", title: "Pantry", desc: "Track what you have at home; lists auto-subtract pantry." },
@@ -20,7 +18,7 @@ export default function DashboardPage() {
     <AppLayout>
       <PageContainer>
         <header className="page-header">
-          <h1 className="page-title">Dashboard</h1>
+          <h1 className="page-title">Home</h1>
           <p className="page-subtitle">
             Upload recipes, plan meals, and shop across stores.
           </p>

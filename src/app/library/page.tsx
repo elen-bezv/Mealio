@@ -5,14 +5,23 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer, Card, Button, Input, Textarea, LoadingFallback } from "@/components/ui";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import type { ParseRecipeResult } from "@/types";
+import type { ParseRecipeResult, RecipeCategory } from "@/types";
+
+const RECIPE_CATEGORIES: RecipeCategory[] = ["BREAKFAST", "LUNCH", "DINNER", "DESSERT", "SNACK", "OTHER"];
+const CATEGORY_LABELS: Record<RecipeCategory, string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+  DESSERT: "Dessert",
+  SNACK: "Snack",
+  OTHER: "Other",
+};
 
 type RecipeItem = {
   id: string;
   title: string;
   displayTitle?: string;
   category: string;
-  isBuiltIn?: boolean;
   recipeIngredients: { length: number }[];
 };
 
@@ -35,7 +44,7 @@ async function parseRecipe(body: { text?: string; url?: string }) {
 async function createRecipe(data: {
   title: string;
   description?: string;
-  category: string;
+  category: RecipeCategory;
   ingredients: { name: string; quantity: string; unit?: string; category?: string }[];
 }) {
   const r = await fetch("/api/recipes", {
@@ -61,9 +70,13 @@ function LibraryContent() {
   const [url, setUrl] = useState("");
   const [parsed, setParsed] = useState<ParseRecipeResult | null>(null);
   const [parseLoading, setParseLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<RecipeCategory | null>(null);
+  const [saveCategory, setSaveCategory] = useState<RecipeCategory>("OTHER");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  const importedCount = searchParams.get("imported");
 
   useEffect(() => {
     if (searchParams.get("upload") === "1") setUploadOpen(true);
@@ -100,7 +113,11 @@ function LibraryContent() {
     },
   });
 
-  const userRecipes = Array.isArray(recipes) ? recipes.filter((r: RecipeItem) => !r.isBuiltIn) : [];
+  const recipesList = Array.isArray(recipes) ? recipes : [];
+  const filtered =
+    selectedCategory == null
+      ? recipesList
+      : recipesList.filter((r: RecipeItem) => (r.category || "OTHER") === selectedCategory);
 
   async function handleParse() {
     setParseLoading(true);
@@ -115,10 +132,20 @@ function LibraryContent() {
   return (
     <AppLayout>
       <PageContainer>
-        <header className="page-header" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "var(--spacing-4)" }}>
+        {importedCount != null && Number(importedCount) > 0 && (
+          <div className="card border-[var(--accent)]/30 bg-[var(--accent-muted)]" style={{ padding: "var(--spacing-4)", marginBottom: "var(--spacing-6)" }} role="status">
+            <p className="text-[var(--text-body)] text-[var(--accent)]">
+              Added {importedCount} recipe{Number(importedCount) !== 1 ? "s" : ""} to your library.
+            </p>
+          </div>
+        )}
+
+        <header className="page-header" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "var(--spacing-4)", marginBottom: "var(--spacing-6)" }}>
           <div>
             <h1 className="page-title">Recipe Library</h1>
-            <p className="page-subtitle">Save and manage your recipes.</p>
+            <p className="page-subtitle">
+              Your recipes by category. Import or create, then browse, edit, and add to planner or shopping list.
+            </p>
           </div>
           <Button onClick={() => setUploadOpen(true)}>Upload recipe</Button>
         </header>
@@ -148,12 +175,25 @@ function LibraryContent() {
               <div className="card mt-6" style={{ padding: "var(--spacing-4)", background: "var(--bg-input)" }}>
                 <h3 className="font-semibold text-[var(--text-section)]" style={{ marginBottom: "var(--spacing-2)" }}>{parsed.title}</h3>
                 <p className="input-helper" style={{ marginBottom: "var(--spacing-4)" }}>{parsed.ingredients.length} ingredients</p>
+                <div className="input-wrap" style={{ marginBottom: "var(--spacing-4)" }}>
+                  <label className="input-label">Category</label>
+                  <select
+                    value={saveCategory}
+                    onChange={(e) => setSaveCategory(e.target.value as RecipeCategory)}
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[var(--text-body)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
+                    style={{ height: "var(--input-height)", fontSize: "var(--text-body-sm)", maxWidth: "200px" }}
+                  >
+                    {RECIPE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                    ))}
+                  </select>
+                </div>
                 <ul className="list-inside list-disc text-[var(--text-body-sm)] text-[var(--text-secondary)]" style={{ marginBottom: "var(--spacing-4)" }}>
                   {parsed.ingredients.map((i, idx) => (
                     <li key={idx}>{i.name} – {i.quantity} {i.unit ?? ""}</li>
                   ))}
                 </ul>
-                <Button onClick={() => saveMutation.mutate({ title: parsed.title, description: parsed.description, category: "OTHER", ingredients: parsed.ingredients })} disabled={saveMutation.isPending}>
+                <Button onClick={() => saveMutation.mutate({ title: parsed.title, description: parsed.description, category: saveCategory, ingredients: parsed.ingredients })} disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? "Saving…" : "Save to library"}
                 </Button>
               </div>
@@ -161,11 +201,33 @@ function LibraryContent() {
           </Card>
         )}
 
+        <div className="flex flex-wrap gap-2" style={{ marginBottom: "var(--spacing-6)" }}>
+          <Button
+            variant={selectedCategory === null ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => setSelectedCategory(null)}
+            className="rounded-full"
+          >
+            All
+          </Button>
+          {RECIPE_CATEGORIES.map((c) => (
+            <Button
+              key={c}
+              variant={selectedCategory === c ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setSelectedCategory(c)}
+              className="rounded-full"
+            >
+              {CATEGORY_LABELS[c]}
+            </Button>
+          ))}
+        </div>
+
         {isLoading ? (
           <p className="text-[var(--text-secondary)]">Loading…</p>
         ) : (
           <div className="grid gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-3" style={{ marginBottom: "var(--spacing-8)" }}>
-            {userRecipes.map((r: RecipeItem) => (
+            {filtered.map((r: RecipeItem) => (
               <div
                 key={r.id}
                 className="card card-interactive cursor-pointer"
@@ -252,11 +314,19 @@ function LibraryContent() {
                   )}
                 </div>
                 <h3 className="font-semibold text-[var(--text-body)] pr-8" style={{ marginBottom: "var(--spacing-1)" }}>{r.displayTitle ?? r.title}</h3>
-                <p className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--text-body-sm)" }}>{r.category} · {r.recipeIngredients?.length ?? 0} ingredients</p>
+                <p className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--text-body-sm)" }}>
+                  {CATEGORY_LABELS[r.category as RecipeCategory] ?? r.category} · {r.recipeIngredients?.length ?? 0} ingredients
+                </p>
               </div>
             ))}
-            {userRecipes.length === 0 && !uploadOpen && (
-              <p className="col-span-full text-[var(--text-secondary)]" style={{ padding: "var(--spacing-6)" }}>No recipes yet. Upload a recipe to get started.</p>
+            {filtered.length === 0 && !uploadOpen && (
+              <p className="col-span-full text-[var(--text-secondary)]" style={{ padding: "var(--spacing-6)" }}>
+                {recipesList.length === 0
+                  ? "No recipes yet. Import a recipe or use Upload recipe to get started."
+                  : selectedCategory
+                    ? `No recipes in ${CATEGORY_LABELS[selectedCategory]}. Try another category or add a recipe.`
+                    : "No recipes yet. Import a recipe or use Upload recipe to get started."}
+              </p>
             )}
           </div>
         )}

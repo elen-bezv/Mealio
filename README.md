@@ -5,8 +5,7 @@ Production-grade AI web app that converts recipes into grocery shopping carts ac
 ## Features
 
 - **Recipe upload**: Text, image, PDF, or URL → AI extracts and normalizes ingredients
-- **Recipe library**: Save, edit, tag, categorize (breakfast/lunch/dinner/dessert)
-- **Ready recipes**: Built-in collection; add to meal plan or shopping list
+- **Recipe library**: Single destination for all recipes. Save, edit, tag, categorize (breakfast/lunch/dinner/dessert/snack/other). Import from text, URL, image, or PDF—all go to the library.
 - **Weekly meal planner**: 7× breakfast/lunch/dinner (+ optional dessert); merge ingredients into one list
 - **Shopping list**: Merged, normalized ingredients; by category (Vegetables, Dairy, Meat, Pantry, Frozen)
 - **Multi-store**: Connect Walmart, Instacart, Tesco (or local stores)
@@ -102,7 +101,7 @@ prisma/
 
 1. **Upload recipes** → Parse (AI) → Shopping list → Choose store → Agent adds to cart
 2. **Weekly menu** → Select recipes → Generate plan → Merged list → Choose store → Agent fills cart
-3. **Ready recipes** → Add to list → Shop automatically
+3. **Recipe library** → Add to list → Shop automatically
 
 ## Security
 

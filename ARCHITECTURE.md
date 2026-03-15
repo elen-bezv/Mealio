@@ -9,9 +9,9 @@ This document describes the modular domain architecture. All AI logic flows thro
 ```
 src/
 ├── app/                    # Next.js App Router (pages + API routes)
-│   ├── api/                # API by domain: auth, recipes, cookbooks, meal-plans,
+│   ├── api/                # API by domain: auth, recipes, meal-plans,
 │   │                       # shopping-lists, pantry, store-connections, agent
-│   ├── (pages)             # UI: dashboard, import, library, cookbooks, planner,
+│   ├── (pages)             # UI: dashboard, import, library, planner,
 │   │                       # shopping, pantry, stores, settings, login
 │   ├── layout.tsx
 │   └── providers.tsx
@@ -65,7 +65,7 @@ Database: **Prisma** at project root (`prisma/schema.prisma`). No separate `/dat
 |--------|----------------|------------------|
 | **Recipe system** | CRUD, creation from structured input, translations, tags | `POST/GET/PATCH/DELETE /api/recipes`, `services/recipe-creation.ts` |
 | **Recipe parser (Pro)** | URL / Instagram / TikTok / image / PDF / text → StructuredRecipe | `services/recipe-parser-pro.ts`, `POST /api/parse-recipe-pro` |
-| **Cookbooks** | PDF upload, boundary detection, bulk import | `services/cookbook-pdf.ts`, `POST /api/cookbooks/upload`, `POST /api/cookbooks/[id]/import` |
+| **PDF import** | Parse PDF → extract recipes → insert into Recipe Library | `services/cookbook-pdf.ts`, `POST /api/recipes/import-pdf` |
 | **Meal planner** | Weekly plans, meal slots | `GET/POST/PATCH/DELETE /api/meal-plans` |
 | **Shopping list** | Merge ingredients, pantry adjustment, list CRUD | `services/shopping-list.ts`, `POST/GET /api/shopping-lists` |
 | **Pantry** | Inventory, matching (normalize + subtract) | `services/pantry-matching.ts`, `GET/POST/PATCH/DELETE /api/pantry` |
@@ -99,7 +99,7 @@ Single responsibility: **normalization**, **merge**, **unit conversion**, **pers
 - **Persistence:** `lib/ingredient-db.ts` — `getOrCreateIngredient(name, category?)` using normalized/canonical name so all domains share the same Ingredient rows.
 - **Merge + units:** `services/shopping-list.ts` — `mergeIngredients()` uses normalize + `lib/unit-conversion.ts` (`toPreferredUnit`, `formatQuantity`, `addQuantities`).
 
-Used by: recipe creation, cookbook import, shopping list generator, pantry comparison, grocery agent.
+Used by: recipe creation, PDF import, shopping list generator, pantry comparison, grocery agent.
 
 ---
 
@@ -109,7 +109,7 @@ Used by: recipe creation, cookbook import, shopping list generator, pantry compa
 - **Source types:** manual, website, instagram, tiktok, image, pdf, text.
 - **Creation:** One path — **`services/recipe-creation.ts`** `createRecipeFromStructured(userId, input, options)`. Used by:
   - `POST /api/recipes` (manual/import payload)
-  - `POST /api/cookbooks/[id]/import` (each selected StructuredRecipe)
+  - `POST /api/recipes/import-pdf` (PDF: parse → create one recipe per extracted item → Recipe Library)
 
 Ensures: language detection, original + user-locale translation, `getOrCreateIngredient` + `RecipeIngredient` with `translatedDisplayName`.
 
@@ -144,7 +144,7 @@ Implemented in: `createShoppingListFromIngredients(..., { subtractPantry: true }
 
 ## 9. Database (Prisma)
 
-Main tables: **User**, **Recipe**, **RecipeTranslation**, **RecipeTag**, **Ingredient**, **RecipeIngredient**, **Cookbook**, **MealPlan**, **MealPlanRecipe**, **ShoppingList**, **ShoppingListItem**, **PantryItem**, **StoreConnection**, **Account**, **Session**.
+Main tables: **User**, **Recipe**, **RecipeTranslation**, **RecipeTag**, **Ingredient**, **RecipeIngredient**, **MealPlan**, **MealPlanRecipe**, **ShoppingList**, **ShoppingListItem**, **PantryItem**, **StoreConnection**, **Account**, **Session**. (Cookbook table exists for legacy/backward compatibility but is not used in the product; PDF import goes to Recipe Library via `POST /api/recipes/import-pdf`.)
 
 - **Ingredient:** Use `getOrCreateIngredient` with normalized name; set `canonicalName` for consistency with pantry matching.
 - **PantryItem:** `ingredientName` + `normalizedIngredientName` (no FK to Ingredient); matching via same canonical keys as shopping.
@@ -163,7 +163,7 @@ Main tables: **User**, **Recipe**, **RecipeTranslation**, **RecipeTag**, **Ingre
 ## 11. Refactor Summary (Done)
 
 - Duplicate `formatMergedQuantity` removed; use `formatQuantity` from `lib/unit-conversion.ts`.
-- Shared **recipe creation** in `services/recipe-creation.ts`; used by `POST /api/recipes` and cookbook import.
+- Shared **recipe creation** in `services/recipe-creation.ts`; used by `POST /api/recipes` and `POST /api/recipes/import-pdf`.
 - **getOrCreateIngredient** in `lib/ingredient-db.ts`; recipe creation and shopping-list use it; normalization applied when creating Ingredient.
 - **getRequireUserId** and **getUserLocale** in `lib/auth.ts`; **APP_LOCALES** in `lib/constants.ts`; APIs use them.
 - **Central AI layer** at `services/ai/` (re-exports existing AI/ingredient/unit code).
